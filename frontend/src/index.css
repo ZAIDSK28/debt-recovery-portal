@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+:root {
+  --gradient-primary-from: #6366f1;
+  --gradient-primary-via: #8b5cf6;
+  --gradient-primary-to: #a855f7;
+  --color-primary-500: #6366f1;
+  --color-accent: #8b5cf6;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #3b82f6;
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: "Inter", sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: #0f172a;
+}
