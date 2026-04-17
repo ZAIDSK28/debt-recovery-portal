@@ -1,5 +1,12 @@
+// src/api/bills.api.ts
+
 import { axiosInstance } from "@/api/axiosInstance";
-import type { ImportBillsResult, Invoice, PaginatedResponse } from "@/types";
+import type {
+  ImportBillsResult,
+  ImportBillsStatus,
+  Invoice,
+  PaginatedResponse,
+} from "@/types";
 
 export interface BillsQueryParams {
   page?: number;
@@ -68,6 +75,11 @@ export async function importBillsApi(file: File): Promise<ImportBillsResult> {
       "Content-Type": "multipart/form-data",
     },
   });
+  return data;
+}
+
+export async function getImportBillsStatusApi(jobId: number): Promise<ImportBillsStatus> {
+  const { data } = await axiosInstance.get<ImportBillsStatus>(`/bills/import/${jobId}/status/`);
   return data;
 }
 

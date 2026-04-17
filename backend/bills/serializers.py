@@ -1,10 +1,12 @@
+# bills/serializers.py
+
 from __future__ import annotations
 
 from decimal import Decimal
 
 from rest_framework import serializers
 
-from bills.models import Bill, Outlet, Route
+from bills.models import Bill, BillImportJob, Outlet, Route
 from users.models import User
 
 
@@ -113,6 +115,7 @@ class BillCreateUpdateSerializer(serializers.ModelSerializer):
 
         return attrs
 
+
 class AssignBillsSerializer(serializers.Serializer):
     bill_ids = serializers.ListField(
         child=serializers.IntegerField(min_value=1),
@@ -123,3 +126,27 @@ class AssignBillsSerializer(serializers.Serializer):
         allow_null=True,
         required=False,
     )
+
+
+class BillImportJobStatusSerializer(serializers.ModelSerializer):
+    percentage = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BillImportJob
+        fields = [
+            "id",
+            "status",
+            "total_rows",
+            "processed_rows",
+            "imported",
+            "error_count",
+            "errors",
+            "created_at",
+            "completed_at",
+            "percentage",
+        ]
+
+    def get_percentage(self, obj):
+        if not obj.total_rows:
+            return 0
+        return int((obj.processed_rows * 100) / obj.total_rows)

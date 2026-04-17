@@ -1,6 +1,8 @@
+// src/router/index.tsx
+
 import { createBrowserRouter } from "react-router-dom";
 import { lazy } from "react";
-import { ProtectedRoute } from "@/components/layout/protected-route";
+import { ProtectedRoute, PublicOnlyRoute } from "@/components/layout/protected-route";
 
 const LoginPage = lazy(() => import("@/pages/auth/login-page"));
 const VerifyOtpPage = lazy(() => import("@/pages/auth/verify-otp-page"));
@@ -9,18 +11,26 @@ const AdminPaymentsPage = lazy(() => import("@/pages/admin/admin-payments-page")
 const AdminChequesPage = lazy(() => import("@/pages/admin/admin-cheques-page"));
 const AdminElectronicPage = lazy(() => import("@/pages/admin/admin-electronic-page"));
 const DRADashboardPage = lazy(() => import("@/pages/dra/dra-dashboard-page"));
+const ErrorPage = lazy(() => import("@/pages/error-page"));
 
 export const router = createBrowserRouter([
   {
-    path: "/login",
-    element: <LoginPage />,
-  },
-  {
-    path: "/verify",
-    element: <VerifyOtpPage />,
+    element: <PublicOnlyRoute />,
+    errorElement: <ErrorPage />,
+    children: [
+      {
+        path: "/login",
+        element: <LoginPage />,
+      },
+      {
+        path: "/verify",
+        element: <VerifyOtpPage />,
+      },
+    ],
   },
   {
     element: <ProtectedRoute allowedRole="admin" />,
+    errorElement: <ErrorPage />,
     children: [
       {
         path: "/admin",
@@ -42,6 +52,7 @@ export const router = createBrowserRouter([
   },
   {
     element: <ProtectedRoute allowedRole="dra" />,
+    errorElement: <ErrorPage />,
     children: [
       {
         path: "/dra",
@@ -52,5 +63,6 @@ export const router = createBrowserRouter([
   {
     path: "*",
     element: <LoginPage />,
+    errorElement: <ErrorPage />,
   },
 ]);

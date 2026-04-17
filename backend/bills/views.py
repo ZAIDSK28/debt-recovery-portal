@@ -1,14 +1,19 @@
+# bills/views.py
+
 from __future__ import annotations
+
+import threading
 
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, parsers, permissions, status, views
 from rest_framework.response import Response
 
 from bills.filters import BillFilterSet
-from bills.models import Bill, Outlet, Route
+from bills.models import Bill, BillImportJob, Outlet, Route
 from bills.serializers import (
     AssignBillsSerializer,
     BillCreateUpdateSerializer,
+    BillImportJobStatusSerializer,
     BillSerializer,
     OutletSerializer,
     RouteSerializer,
@@ -165,6 +170,28 @@ class ExportBillsView(views.APIView):
         return build_bills_export_response(queryset)
 
 
+def _run_import_job(job_id: int, file_bytes: bytes):
+    from io import BytesIO
+
+    job = BillImportJob.objects.get(id=job_id)
+    try:
+        result = import_bills_from_excel(BytesIO(file_bytes), job=job)
+        create_audit_log(
+            actor=job.created_by,
+            action="bill.imported",
+            entity_type="bill_import",
+            entity_id=str(job.id),
+            metadata=result,
+        )
+    except Exception as exc:
+        job.status = BillImportJob.Status.FAILED
+        job.errors = [{"row": None, "message": str(exc)}]
+        job.error_count = 1
+        from django.utils import timezone
+        job.completed_at = timezone.now()
+        job.save(update_fields=["status", "errors", "error_count", "completed_at"])
+
+
 class ImportBillsView(views.APIView):
     permission_classes = [IsAdmin]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser]
@@ -174,15 +201,26 @@ class ImportBillsView(views.APIView):
         if not file:
             return Response({"detail": "File is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        result = import_bills_from_excel(file)
-        create_audit_log(
-            actor=request.user,
-            action="bill.imported",
-            entity_type="bill_import",
-            entity_id="bulk",
-            metadata=result,
+        job = BillImportJob.objects.create(created_by=request.user)
+
+        file_bytes = file.read()
+        thread = threading.Thread(target=_run_import_job, args=(job.id, file_bytes), daemon=True)
+        thread.start()
+
+        return Response(
+            {
+                "imported": 0,
+                "errors": [],
+                "job_id": job.id,
+            },
+            status=status.HTTP_200_OK,
         )
-        return Response(result, status=status.HTTP_200_OK)
+
+
+class BillImportStatusView(generics.RetrieveAPIView):
+    permission_classes = [IsAdmin]
+    serializer_class = BillImportJobStatusSerializer
+    queryset = BillImportJob.objects.all()
 
 
 class MyAssignmentsFlatView(generics.ListAPIView):

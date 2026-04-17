@@ -1,3 +1,5 @@
+// src/types/index.ts
+
 export type UserRole = "admin" | "dra";
 export type PaymentMethod = "cash" | "upi" | "cheque" | "electronic";
 export type ChequeStatus = "pending" | "cleared" | "bounced";
@@ -24,24 +26,6 @@ export interface Outlet {
   name: string;
   route_id: number;
   route_name: string;
-}
-
-export interface Invoice {
-  id: number;
-  invoice_number: string;
-  invoice_date: string;
-  outlet: number;
-  outlet_name: string;
-  route_name: string;
-  brand: string;
-  actual_amount: string;
-  remaining_amount: string;
-  overdue_days: number;
-  status: BillStatus;
-  assigned_to_id?: number | null;
-  assigned_to_name?: string | null;
-  created_at: string;
-  cleared_at?: string | null;
 }
 
 export interface SimpleBill {
@@ -118,6 +102,23 @@ export interface ImportBillsResult {
     row: number | null;
     message: string;
   }>;
+  job_id?: number;
+}
+
+export interface ImportBillsStatus {
+  id: number;
+  status: "processing" | "completed" | "failed";
+  total_rows: number;
+  processed_rows: number;
+  imported: number;
+  error_count: number;
+  errors: Array<{
+    row: number | null;
+    message: string;
+  }>;
+  created_at: string;
+  completed_at: string | null;
+  percentage: number;
 }
 
 export interface Invoice {

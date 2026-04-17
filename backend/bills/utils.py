@@ -1,3 +1,5 @@
+# bills/utils.py
+
 from __future__ import annotations
 
 import io
@@ -7,7 +9,8 @@ import pandas as pd
 from django.http import HttpResponse
 from django.utils import timezone
 
-from bills.models import Bill, Outlet
+from bills.models import Bill, BillImportJob, Outlet, Route
+from users.models import User
 
 
 COLUMN_ALIASES = {
@@ -36,19 +39,39 @@ def format_export_datetime(value):
 
 def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
-
-    # First map known exported headers to internal field names
     df = df.rename(columns=COLUMN_ALIASES)
-
-    # Then normalize anything else to snake_case
     df.columns = (
         df.columns.astype(str)
         .str.strip()
         .str.lower()
         .str.replace(r"\s+", "_", regex=True)
     )
-
     return df
+
+
+def _clean_cell_value(value) -> str:
+    if pd.isna(value):
+        return ""
+    return str(value).strip()
+
+
+def _resolve_assigned_user(assigned_to_value: str) -> User | None:
+    if not assigned_to_value:
+        return None
+
+    user = User.objects.filter(full_name=assigned_to_value).first()
+    if user:
+        return user
+
+    user = User.objects.filter(username=assigned_to_value).first()
+    if user:
+        return user
+
+    user = User.objects.filter(email=assigned_to_value).first()
+    if user:
+        return user
+
+    return None
 
 
 def build_bills_export_response(queryset) -> HttpResponse:
@@ -85,7 +108,7 @@ def build_bills_export_response(queryset) -> HttpResponse:
     return response
 
 
-def import_bills_from_excel(file) -> dict:
+def import_bills_from_excel(file, job: BillImportJob | None = None) -> dict:
     df = pd.read_excel(file)
     df = normalize_columns(df)
 
@@ -104,15 +127,35 @@ def import_bills_from_excel(file) -> dict:
 
     for column in required_columns:
         if column not in df.columns:
-            return {"imported": 0, "errors": [{"row": None, "message": f"Missing column: {column}"}]}
+            result = {"imported": 0, "errors": [{"row": None, "message": f"Missing column: {column}"}]}
+            if job:
+                job.status = BillImportJob.Status.FAILED
+                job.total_rows = 0
+                job.processed_rows = 0
+                job.imported = 0
+                job.errors = result["errors"]
+                job.error_count = len(result["errors"])
+                job.completed_at = timezone.now()
+                job.save(update_fields=["status", "total_rows", "processed_rows", "imported", "errors", "error_count", "completed_at"])
+            return result
+
+    if job:
+        job.status = BillImportJob.Status.PROCESSING
+        job.total_rows = len(df.index)
+        job.processed_rows = 0
+        job.imported = 0
+        job.errors = []
+        job.error_count = 0
+        job.save(update_fields=["status", "total_rows", "processed_rows", "imported", "errors", "error_count"])
 
     for index, row in df.iterrows():
         row_number = index + 2
         try:
-            invoice_number = str(row["invoice_number"]).strip()
-            route_name = str(row["route_name"]).strip()
-            outlet_name = str(row["outlet_name"]).strip()
-            brand = str(row["brand"]).strip()
+            invoice_number = _clean_cell_value(row["invoice_number"])
+            route_name = _clean_cell_value(row["route_name"])
+            outlet_name = _clean_cell_value(row["outlet_name"])
+            brand = _clean_cell_value(row["brand"])
+            assigned_to_value = _clean_cell_value(row["assigned_to"]) if "assigned_to" in df.columns else ""
 
             if pd.isna(row["actual_amount"]):
                 raise ValueError("actual_amount is required")
@@ -125,6 +168,15 @@ def import_bills_from_excel(file) -> dict:
             if not invoice_number:
                 raise ValueError("invoice_number is required")
 
+            if not route_name:
+                raise ValueError("route_name is required")
+
+            if not outlet_name:
+                raise ValueError("outlet_name is required")
+
+            if not brand:
+                raise ValueError("brand is required")
+
             if invoice_number in seen_invoice_numbers:
                 raise ValueError("duplicate invoice_number found in uploaded file")
             seen_invoice_numbers.add(invoice_number)
@@ -135,13 +187,9 @@ def import_bills_from_excel(file) -> dict:
             if actual_amount <= Decimal("0.00"):
                 raise ValueError("actual_amount must be greater than zero")
 
-            outlet = (
-                Outlet.objects.filter(name=outlet_name, route__name=route_name)
-                .select_related("route")
-                .first()
-            )
-            if not outlet:
-                raise ValueError("Outlet not found for route")
+            route, _ = Route.objects.get_or_create(name=route_name)
+            outlet, _ = Outlet.objects.get_or_create(name=outlet_name, route=route)
+            assigned_user = _resolve_assigned_user(assigned_to_value)
 
             Bill.objects.create(
                 invoice_number=invoice_number,
@@ -150,9 +198,28 @@ def import_bills_from_excel(file) -> dict:
                 brand=brand,
                 actual_amount=actual_amount,
                 remaining_amount=actual_amount,
+                assigned_to=assigned_user,
             )
             imported += 1
         except Exception as exc:
             errors.append({"row": row_number, "message": str(exc)})
+        finally:
+            if job:
+                job.processed_rows += 1
+                job.imported = imported
+                job.errors = errors
+                job.error_count = len(errors)
+                job.save(update_fields=["processed_rows", "imported", "errors", "error_count"])
 
-    return {"imported": imported, "errors": errors}
+    result = {"imported": imported, "errors": errors}
+
+    if job:
+        job.status = BillImportJob.Status.COMPLETED
+        job.completed_at = timezone.now()
+        job.imported = imported
+        job.errors = errors
+        job.error_count = len(errors)
+        job.processed_rows = job.total_rows
+        job.save(update_fields=["status", "completed_at", "imported", "errors", "error_count", "processed_rows"])
+
+    return result

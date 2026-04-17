@@ -1,3 +1,5 @@
+# bills/models.py
+
 from __future__ import annotations
 
 from decimal import Decimal
@@ -89,3 +91,30 @@ class Bill(models.Model):
         self.refresh_overdue()
         self.reconcile_status()
         super().save(*args, **kwargs)
+
+
+class BillImportJob(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        PROCESSING = "processing", "Processing"
+        COMPLETED = "completed", "Completed"
+        FAILED = "failed", "Failed"
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="bill_import_jobs",
+    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    total_rows = models.PositiveIntegerField(default=0)
+    processed_rows = models.PositiveIntegerField(default=0)
+    imported = models.PositiveIntegerField(default=0)
+    errors = models.JSONField(default=list, blank=True)
+    error_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
