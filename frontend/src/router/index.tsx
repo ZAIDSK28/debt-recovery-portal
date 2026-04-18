@@ -11,6 +11,9 @@ const AdminPaymentsPage = lazy(() => import("@/pages/admin/admin-payments-page")
 const AdminChequesPage = lazy(() => import("@/pages/admin/admin-cheques-page"));
 const AdminElectronicPage = lazy(() => import("@/pages/admin/admin-electronic-page"));
 const DRADashboardPage = lazy(() => import("@/pages/dra/dra-dashboard-page"));
+const InvoicesListPage = lazy(() => import("@/pages/invoices/invoices-list-page"));
+const CreateInvoicePage = lazy(() => import("@/pages/invoices/create-invoice-page"));
+const InvoiceDetailPage = lazy(() => import("@/pages/invoices/invoice-detail-page"));
 const ErrorPage = lazy(() => import("@/pages/error-page"));
 
 export const router = createBrowserRouter([
@@ -47,6 +50,18 @@ export const router = createBrowserRouter([
       {
         path: "/admin/electronic",
         element: <AdminElectronicPage />,
+      },
+      {
+        path: "/invoices",
+        element: <InvoicesListPage />,
+      },
+      {
+        path: "/invoices/new",
+        element: <CreateInvoicePage />,
+      },
+      {
+        path: "/invoices/:id",
+        element: <InvoiceDetailPage />,
       },
     ],
   },

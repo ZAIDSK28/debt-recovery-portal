@@ -1,3 +1,5 @@
+// src/hooks/queryKeys.ts
+
 export const queryKeys = {
   bills: (params?: unknown) => ["bills", params] as const,
   myAssignments: (params?: unknown) => ["my-assignments", params] as const,
@@ -7,4 +9,6 @@ export const queryKeys = {
   payments: (params?: unknown) => ["payments", params] as const,
   todayTotals: ["today-totals"] as const,
   dailySummary: (days: number) => ["daily-summary", days] as const,
+  invoiceReports: (params?: unknown) => ["invoice-reports", params] as const,
+  invoiceReportDetail: (id: number) => ["invoice-report", id] as const,
 };

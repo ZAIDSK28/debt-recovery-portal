@@ -1,3 +1,5 @@
+// src/context/AuthContext.tsx
+
 import {
   createContext,
   useCallback,
@@ -9,6 +11,7 @@ import {
 } from "react";
 import {
   clearAuthStorage,
+  getStoredAccessToken,
   getStoredUser,
   PENDING_OTP_KEY,
   setAuthStorage,
@@ -56,7 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const restoredUser = parseStoredUser();
+    const restoredAccessToken = getStoredAccessToken();
+    const restoredUser = restoredAccessToken ? parseStoredUser() : null;
     const restoredPendingOtp = localStorage.getItem(PENDING_OTP_KEY);
 
     setUser(restoredUser);
@@ -65,6 +69,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (payload: LoginInput): Promise<LoginResult> => {
+    clearAuthStorage();
+    setUser(null);
+    setPendingOtpUsername(null);
+
     const response = await loginApi(payload);
 
     if (!isLoginSuccessResponse(response)) {

@@ -1,3 +1,5 @@
+# debt_recovery_portal/urls.py
+
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
@@ -13,6 +15,7 @@ urlpatterns = [
     path("api/auth/", include("users.urls")),
     path("api/bills/", include("bills.urls")),
     path("api/payments/", include("payments.urls")),
+    path("api/reports/", include("reports.urls")),
     path("api/routes/", RouteListView.as_view(), name="routes-list-root"),
     path("api/outlets/", OutletListView.as_view(), name="outlets-list-root"),
     path("api/my-assignments-flat/", MyAssignmentsFlatView.as_view(), name="my-assignments-flat-root"),

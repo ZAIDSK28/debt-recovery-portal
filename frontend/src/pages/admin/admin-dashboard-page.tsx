@@ -1,3 +1,5 @@
+// src/pages/admin/admin-dashboard-page.tsx
+
 import { useMemo, useState } from "react";
 import { Download, FileSpreadsheet, HandCoins, Landmark, Plus, ReceiptIndianRupee, Wallet } from "lucide-react";
 import { toast } from "sonner";
@@ -21,10 +23,8 @@ import { useUsers } from "@/hooks/useUsers";
 import { exportBillsApi } from "@/api/bills.api";
 import { downloadBlob, formatCurrency, getApiError } from "@/lib/utils";
 import type { Invoice } from "@/types";
-import { useNavigate } from "react-router-dom";
 
 export default function AdminDashboardPage() {
-  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const pageSize = 20;
   const [search, setSearch] = useState("");
@@ -63,7 +63,7 @@ export default function AdminDashboardPage() {
           }}
         >
           <Plus className="mr-2 h-4 w-4" />
-          New Invoice
+          New Bill
         </Button>
         <Button variant="outline" onClick={() => setIsImportOpen(true)}>
           <FileSpreadsheet className="mr-2 h-4 w-4" />
@@ -97,18 +97,9 @@ export default function AdminDashboardPage() {
           <Download className="mr-2 h-4 w-4" />
           Export Bills
         </Button>
-        <Button variant="outline" onClick={() => navigate("/admin/payments")}>
-          Payment History
-        </Button>
-        <Button variant="outline" onClick={() => navigate("/admin/cheques")}>
-          Cheque History
-        </Button>
-        <Button variant="outline" onClick={() => navigate("/admin/electronic")}>
-          Electronic History
-        </Button>
       </>
     ),
-    [navigate, billExportStartDate, billExportEndDate, billsQuery.data?.count]
+    [billExportStartDate, billExportEndDate, billsQuery.data?.count]
   );
 
   return (

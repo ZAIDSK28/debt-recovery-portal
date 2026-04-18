@@ -6,6 +6,7 @@ export type ChequeStatus = "pending" | "cleared" | "bounced";
 export type ChequeType = "rtgs" | "neft" | "imps";
 export type Firm = "NA" | "MZ";
 export type BillStatus = "open" | "cleared";
+export type InvoiceCreationMode = "bill_only" | "printable_only" | "printable_and_bill";
 
 export interface User {
   id: number;
@@ -28,10 +29,12 @@ export interface Outlet {
   route_name: string;
 }
 
-export interface SimpleBill {
+export interface Invoice {
   id: number;
   invoice_number: string;
   invoice_date: string;
+  outlet: number;
+  route_id?: number;
   outlet_name: string;
   route_name: string;
   brand: string;
@@ -39,6 +42,10 @@ export interface SimpleBill {
   remaining_amount: string;
   overdue_days: number;
   status: BillStatus;
+  assigned_to_id?: number | null;
+  assigned_to_name?: string | null;
+  created_at: string;
+  cleared_at?: string | null;
 }
 
 export interface Payment {
@@ -78,8 +85,6 @@ export interface PaginatedResponse<T> {
   previous: string | null;
   results: T[];
 }
-
-export type AssignmentsResponse = PaginatedResponse<Invoice>;
 
 export interface AuthTokens {
   access: string;
@@ -121,21 +126,75 @@ export interface ImportBillsStatus {
   percentage: number;
 }
 
-export interface Invoice {
+export interface InvoiceReportRequestItem {
+  description: string;
+  quantity: string;
+  rate: string;
+  amount: string;
+}
+
+export interface InvoiceReportResponseItem extends InvoiceReportRequestItem {
+  id: number;
+}
+
+export interface InvoiceReportPayload {
+  items: InvoiceReportRequestItem[];
+}
+
+export interface InvoiceReportListItem {
   id: number;
   invoice_number: string;
   invoice_date: string;
-  outlet: number;
-  route_id?: number;
-  outlet_name: string;
+  customer_name: string;
   route_name: string;
+  outlet_name: string;
   brand: string;
-  actual_amount: string;
-  remaining_amount: string;
-  overdue_days: number;
-  status: BillStatus;
-  assigned_to_id?: number | null;
-  assigned_to_name?: string | null;
+  total_amount: string;
+  creation_mode: InvoiceCreationMode;
+  linked_bill_id: number | null;
   created_at: string;
-  cleared_at?: string | null;
+}
+
+export interface InvoiceReport {
+  id: number;
+  invoice_number: string;
+  invoice_date: string;
+  customer_name: string;
+  customer_address: string;
+  customer_phone: string;
+  gst_number: string;
+  route_name: string;
+  outlet_name: string;
+  brand: string;
+  subtotal: string;
+  tax_amount: string;
+  discount_amount: string;
+  total_amount: string;
+  notes: string;
+  terms: string;
+  creation_mode: InvoiceCreationMode;
+  linked_bill_id: number | null;
+  payload: InvoiceReportPayload;
+  items: InvoiceReportResponseItem[];
+  created_at: string;
+}
+
+export interface CreateInvoiceReportPayload {
+  invoice_number: string;
+  invoice_date: string;
+  customer_name: string;
+  customer_address: string;
+  customer_phone: string;
+  gst_number: string;
+  route_name: string;
+  outlet_name: string;
+  brand: string;
+  subtotal: string;
+  tax_amount: string;
+  discount_amount: string;
+  total_amount: string;
+  notes: string;
+  terms: string;
+  creation_mode: InvoiceCreationMode;
+  items: InvoiceReportRequestItem[];
 }
