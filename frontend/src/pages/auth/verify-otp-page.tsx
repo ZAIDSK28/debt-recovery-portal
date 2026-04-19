@@ -84,10 +84,10 @@ export default function VerifyOtpPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.14),transparent_35%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] px-4 py-10">
-      <Card className={cn("w-full max-w-md shadow-xl transition", shake && "animate-pulse")}>
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,rgba(186,230,253,0.95),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#f0f9ff_100%)] px-4 py-10">
+      <Card className={cn("w-full max-w-md shadow-[0_20px_50px_rgba(14,165,233,0.14)] transition", shake && "animate-pulse")}>
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Verify OTP</CardTitle>
+          <CardTitle className="text-2xl font-bold tracking-tight">Verify OTP</CardTitle>
           <p className="text-sm text-slate-500">
             Enter the six-digit code sent to your registered email.
           </p>
@@ -106,7 +106,7 @@ export default function VerifyOtpPage() {
                 onKeyDown={(event) => handleKeyDown(index, event)}
                 inputMode="numeric"
                 maxLength={1}
-                className="h-14 w-12 rounded-xl border border-slate-200 text-center text-xl font-bold text-slate-900 outline-none ring-0 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400"
+                className="h-14 w-12 rounded-xl border border-slate-200 bg-white text-center text-xl font-bold text-slate-900 outline-none ring-0 focus:border-sky-300 focus:ring-2 focus:ring-sky-200"
               />
             ))}
           </div>
@@ -122,7 +122,7 @@ export default function VerifyOtpPage() {
               <button
                 type="button"
                 onClick={handleResend}
-                className="font-semibold text-indigo-600 transition hover:text-indigo-700"
+                className="font-semibold text-sky-700 transition hover:text-sky-800"
               >
                 Resend OTP
               </button>

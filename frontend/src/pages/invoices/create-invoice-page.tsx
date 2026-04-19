@@ -1,5 +1,3 @@
-// src/pages/invoices/create-invoice-page.tsx
-
 import { useNavigate } from "react-router-dom";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/page-header";
@@ -45,7 +43,7 @@ export default function CreateInvoicePage() {
 
   return (
     <AppShell title="Create Invoice">
-      <div className="space-y-6">
+      <div className="space-y-5">
         <PageHeader
           title="Create Invoice"
           description="Create a printable invoice and optionally generate a dashboard bill."

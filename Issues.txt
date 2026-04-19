@@ -6,3 +6,6 @@
 
 ------------------------------------------
 5- facing some frontend issues in bill creation , items add 
+
+
+6- need to upgrade the frontend UI , make Input Buttons sleeker 

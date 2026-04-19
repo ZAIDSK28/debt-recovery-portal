@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -7,7 +7,7 @@ export interface ComboboxOption {
   label: string;
 }
 
-export function Combobox({
+export const Combobox = memo(function Combobox({
   options,
   value,
   placeholder = "Select option",
@@ -25,7 +25,10 @@ export function Combobox({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
-  const selected = options.find((option) => option.value === value);
+  const selected = useMemo(
+    () => options.find((option) => option.value === value),
+    [options, value]
+  );
 
   const filtered = useMemo(() => {
     const lower = query.toLowerCase();
@@ -39,18 +42,18 @@ export function Combobox({
         disabled={disabled}
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          "flex h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900",
-          "focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:cursor-not-allowed disabled:bg-slate-50"
+          "flex h-9 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800",
+          "focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-300 disabled:cursor-not-allowed disabled:bg-slate-50"
         )}
       >
-        <span className={selected ? "text-slate-900" : "text-slate-400"}>
+        <span className={selected ? "text-slate-800" : "text-slate-400"}>
           {selected?.label ?? placeholder}
         </span>
         <ChevronDown className="h-4 w-4 text-slate-500" />
       </button>
 
       {open ? (
-        <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+        <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_32px_rgba(15,23,42,0.12)]">
           <div className="border-b border-slate-100 p-2">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -58,7 +61,7 @@ export function Combobox({
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={searchPlaceholder}
-                className="h-10 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
+                className="h-9 w-full rounded-xl border border-slate-200 pl-9 pr-3 text-sm outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-200"
               />
             </div>
           </div>
@@ -73,10 +76,10 @@ export function Combobox({
                     setOpen(false);
                     setQuery("");
                   }}
-                  className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                  className="flex min-h-8 w-full items-center justify-between rounded-xl px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-sky-50"
                 >
                   <span>{option.label}</span>
-                  {option.value === value ? <Check className="h-4 w-4 text-indigo-600" /> : null}
+                  {option.value === value ? <Check className="h-4 w-4 text-sky-700" /> : null}
                 </button>
               ))
             ) : (
@@ -87,4 +90,4 @@ export function Combobox({
       ) : null}
     </div>
   );
-}
+});

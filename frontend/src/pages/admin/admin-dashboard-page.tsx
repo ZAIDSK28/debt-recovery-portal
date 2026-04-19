@@ -1,5 +1,3 @@
-// src/pages/admin/admin-dashboard-page.tsx
-
 import { useMemo, useState } from "react";
 import { Download, FileSpreadsheet, Filter, HandCoins, Landmark, Plus, ReceiptIndianRupee, Wallet } from "lucide-react";
 import { toast } from "sonner";
@@ -23,6 +21,7 @@ import { useUsers } from "@/hooks/useUsers";
 import { exportBillsApi } from "@/api/bills.api";
 import { downloadBlob, formatCurrency, getApiError } from "@/lib/utils";
 import type { Invoice } from "@/types";
+import { ResponsiveTableSkeleton } from "@/components/common/loading-state";
 
 export default function AdminDashboardPage() {
   const [page, setPage] = useState(1);
@@ -40,12 +39,17 @@ export default function AdminDashboardPage() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [deleteBillId, setDeleteBillId] = useState<number | null>(null);
 
-  const billsQuery = useBills({
-    page,
-    page_size: pageSize,
-    search: debouncedSearch,
-    ordering,
-  });
+  const billParams = useMemo(
+    () => ({
+      page,
+      page_size: pageSize,
+      search: debouncedSearch,
+      ordering,
+    }),
+    [page, pageSize, debouncedSearch, ordering]
+  );
+
+  const billsQuery = useBills(billParams);
   const usersQuery = useUsers("dra");
   const totalsQuery = useTodayTotals();
   const dailySummaryQuery = useDailySummary(30);
@@ -119,13 +123,13 @@ export default function AdminDashboardPage() {
             title="Today Cash Collection"
             value={formatCurrency(totalsQuery.data?.cash_total ?? 0)}
             icon={HandCoins}
-            accentClassName="bg-emerald-500"
+            accentClassName="bg-green-500"
           />
           <KpiCard
             title="Today UPI Collection"
             value={formatCurrency(totalsQuery.data?.upi_total ?? 0)}
             icon={Wallet}
-            accentClassName="bg-blue-500"
+            accentClassName="bg-sky-500"
           />
           <KpiCard
             title="Today Cleared Cheques"
@@ -147,7 +151,7 @@ export default function AdminDashboardPage() {
           <DailyCollectionsChart data={dailySummaryQuery.data ?? []} />
         )}
 
-        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="space-y-4 rounded-[18px] border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="w-full max-w-sm">
               <SearchInput
@@ -195,18 +199,11 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {billsQuery.isLoading ? (
-          <div className="space-y-3">
-            <Skeleton className="h-28 w-full lg:hidden" />
-            <Skeleton className="h-28 w-full lg:hidden" />
-            <div className="hidden space-y-3 lg:block">
-              <Skeleton className="h-14 w-full" />
-              <Skeleton className="h-14 w-full" />
-              <Skeleton className="h-14 w-full" />
-            </div>
-          </div>
+                {billsQuery.isLoading ? (
+          <ResponsiveTableSkeleton />
         ) : invoices.length === 0 ? (
           <EmptyState
+            icon={<FileSpreadsheet className="h-6 w-6" />}
             title="No invoices found"
             description="Create a new invoice or adjust your search to view records."
           />

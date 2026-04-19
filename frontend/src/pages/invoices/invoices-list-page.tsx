@@ -1,6 +1,4 @@
-// src/pages/invoices/invoices-list-page.tsx
-
-import { Download, Eye, Plus, Printer } from "lucide-react";
+import { Download, Eye, Plus, Printer, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/app-shell";
@@ -9,13 +7,13 @@ import { SearchInput } from "@/components/common/search-input";
 import { DataTablePagination } from "@/components/common/data-table-pagination";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableWrapper, TBody, TD, TH, THead } from "@/components/ui/table";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useInvoiceReports } from "@/hooks/useInvoices";
 import { downloadBlob, formatCurrency, formatDate, getApiError } from "@/lib/utils";
 import { downloadInvoicePdfApi, getPrintableInvoiceHtmlApi } from "@/api/invoices.api";
 import { useMemo, useState } from "react";
+import { ResponsiveTableSkeleton } from "@/components/common/loading-state";
 
 export default function InvoicesListPage() {
   const navigate = useNavigate();
@@ -24,13 +22,17 @@ export default function InvoicesListPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
 
-  const query = useInvoiceReports({
-    page,
-    page_size: pageSize,
-    search: debouncedSearch || undefined,
-    ordering: "-created_at",
-  });
+  const invoiceParams = useMemo(
+    () => ({
+      page,
+      page_size: pageSize,
+      search: debouncedSearch || undefined,
+      ordering: "-created_at",
+    }),
+    [page, pageSize, debouncedSearch]
+  );
 
+  const query = useInvoiceReports(invoiceParams);
   const rows = query.data?.results ?? [];
 
   const actions = useMemo(
@@ -80,14 +82,14 @@ export default function InvoicesListPage() {
 
   return (
     <AppShell title="Invoices">
-      <div className="space-y-6">
+      <div className="space-y-5">
         <PageHeader
           title="Invoice List"
           description="Manage printable invoices separately from dashboard bills."
           actions={actions}
         />
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="rounded-[18px] border border-slate-200 bg-white p-3.5 shadow-sm">
           <div className="w-full max-w-sm">
             <SearchInput
               placeholder="Search invoices..."
@@ -101,13 +103,10 @@ export default function InvoicesListPage() {
         </div>
 
         {query.isLoading ? (
-          <div className="space-y-3">
-            <Skeleton className="h-14 w-full" />
-            <Skeleton className="h-14 w-full" />
-            <Skeleton className="h-14 w-full" />
-          </div>
+          <ResponsiveTableSkeleton />
         ) : rows.length === 0 ? (
           <EmptyState
+            icon={<FileText className="h-6 w-6" />}
             title="No invoices found"
             description="Create a new printable invoice to get started."
             action={
@@ -118,8 +117,8 @@ export default function InvoicesListPage() {
             }
           />
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <TableWrapper className="rounded-none border-0">
+          <div className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-sm">
+            <TableWrapper className="rounded-none border-0 shadow-none">
               <Table className="min-w-[1100px]">
                 <THead>
                   <tr>
@@ -138,7 +137,7 @@ export default function InvoicesListPage() {
                 </THead>
                 <TBody>
                   {rows.map((invoice) => (
-                    <tr key={invoice.id} className="border-t border-slate-100 transition-colors hover:bg-indigo-50/40">
+                    <tr key={invoice.id} className="border-t border-slate-100 transition-colors hover:bg-sky-50">
                       <TD className="font-medium text-slate-900">{invoice.invoice_number}</TD>
                       <TD>{formatDate(invoice.invoice_date)}</TD>
                       <TD>{invoice.customer_name}</TD>

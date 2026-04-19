@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { z } from "zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import {
@@ -110,7 +110,9 @@ export function PaymentFormModal({
     },
   });
 
-  const method = form.watch("payment_method");
+  const method = useWatch({ control: form.control, name: "payment_method" });
+  const chequeType = useWatch({ control: form.control, name: "cheque_type" });
+  const firm = useWatch({ control: form.control, name: "firm" });
 
   useEffect(() => {
     if (open) {
@@ -183,7 +185,7 @@ export function PaymentFormModal({
         </DialogHeader>
 
         <DialogBody>
-          <div className="mb-5 rounded-2xl bg-slate-50 p-4">
+          <div className="mb-5 rounded-2xl border border-sky-100 bg-sky-50/70 p-4">
             <p className="text-sm text-slate-500">Invoice</p>
             <p className="font-semibold text-slate-900">{bill.invoice_number}</p>
             <p className="mt-2 text-sm text-slate-600">
@@ -203,7 +205,7 @@ export function PaymentFormModal({
             <div className="space-y-2 md:col-span-1">
               <Label>Payment Method</Label>
               <Select
-                value={form.watch("payment_method")}
+                value={method}
                 onValueChange={(value) =>
                   form.setValue("payment_method", value as PaymentFormValues["payment_method"], {
                     shouldValidate: true,
@@ -253,7 +255,7 @@ export function PaymentFormModal({
                 <div className="space-y-2">
                   <Label>Cheque Type</Label>
                   <Select
-                    value={form.watch("cheque_type")}
+                    value={chequeType}
                     onValueChange={(value) =>
                       form.setValue("cheque_type", value as "rtgs" | "neft" | "imps", { shouldValidate: true })
                     }
@@ -275,7 +277,7 @@ export function PaymentFormModal({
                 <div className="space-y-2">
                   <Label>Firm</Label>
                   <Select
-                    value={form.watch("firm")}
+                    value={firm}
                     onValueChange={(value) =>
                       form.setValue("firm", value as "NA" | "MZ", { shouldValidate: true })
                     }

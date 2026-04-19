@@ -1,5 +1,3 @@
-// src/pages/invoices/invoice-detail-page.tsx
-
 import { ArrowLeft, Download, ExternalLink, Printer } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -8,11 +6,11 @@ import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableWrapper, TBody, TD, TH, THead } from "@/components/ui/table";
 import { downloadInvoicePdfApi, getPrintableInvoiceHtmlApi } from "@/api/invoices.api";
 import { useInvoiceReport } from "@/hooks/useInvoices";
 import { downloadBlob, formatCurrency, formatDate, getApiError } from "@/lib/utils";
+import { ResponsiveTableSkeleton } from "@/components/common/loading-state";
 
 export default function InvoiceDetailPage() {
   const navigate = useNavigate();
@@ -69,12 +67,12 @@ export default function InvoiceDetailPage() {
 
   return (
     <AppShell title="Invoice Detail">
-      <div className="space-y-5 sm:space-y-6">
+      <div className="space-y-4 sm:space-y-5">
         <PageHeader
           title={invoice ? `Invoice ${invoice.invoice_number}` : "Invoice Detail"}
           description="View printable invoice details and linked bill information."
           actions={
-            <div className="hidden sm:flex sm:w-auto sm:flex-row sm:flex-wrap sm:gap-3">
+            <div className="hidden sm:flex sm:w-auto sm:flex-row sm:flex-wrap sm:gap-2">
               <Button className="w-full sm:w-auto" variant="outline" onClick={() => navigate("/invoices")}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to List
@@ -96,21 +94,17 @@ export default function InvoiceDetailPage() {
         />
 
         {query.isLoading ? (
-          <div className="space-y-3">
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-56 w-full" />
-            <Skeleton className="h-40 w-full" />
-          </div>
+          <ResponsiveTableSkeleton />
         ) : !invoice ? (
           <EmptyState title="Invoice not found" description="The requested invoice could not be loaded." />
         ) : (
           <>
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
               <Card>
-                <CardHeader className="p-4 sm:p-6">
+                <CardHeader>
                   <CardTitle>Invoice Header</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 p-4 pt-0 text-sm sm:p-6 sm:pt-0">
+                <CardContent className="space-y-2.5 text-sm">
                   <p className="break-words"><span className="font-medium text-slate-900">Invoice Number:</span> {invoice.invoice_number}</p>
                   <p><span className="font-medium text-slate-900">Invoice Date:</span> {formatDate(invoice.invoice_date)}</p>
                   <p><span className="font-medium text-slate-900">Creation Mode:</span> {invoice.creation_mode.replaceAll("_", " ")}</p>
@@ -123,10 +117,10 @@ export default function InvoiceDetailPage() {
               </Card>
 
               <Card>
-                <CardHeader className="p-4 sm:p-6">
+                <CardHeader>
                   <CardTitle>Customer Details</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 p-4 pt-0 text-sm sm:p-6 sm:pt-0">
+                <CardContent className="space-y-2.5 text-sm">
                   <p className="break-words"><span className="font-medium text-slate-900">Customer Name:</span> {invoice.customer_name}</p>
                   <p><span className="font-medium text-slate-900">Phone:</span> {invoice.customer_phone || "—"}</p>
                   <p className="break-words"><span className="font-medium text-slate-900">GST Number:</span> {invoice.gst_number || "—"}</p>
@@ -135,16 +129,16 @@ export default function InvoiceDetailPage() {
               </Card>
 
               <Card>
-                <CardHeader className="p-4 sm:p-6">
+                <CardHeader>
                   <CardTitle>Bill Mapping</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 p-4 pt-0 text-sm sm:p-6 sm:pt-0">
+                <CardContent className="space-y-2.5 text-sm">
                   <p className="break-words"><span className="font-medium text-slate-900">Route Name:</span> {invoice.route_name || "—"}</p>
                   <p className="break-words"><span className="font-medium text-slate-900">Outlet Name:</span> {invoice.outlet_name || "—"}</p>
                   <p className="break-words"><span className="font-medium text-slate-900">Brand:</span> {invoice.brand || "—"}</p>
                   {invoice.linked_bill_id ? (
-                    <div className="pt-2">
-                      <Link to="/admin" className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-700">
+                    <div className="pt-1.5">
+                      <Link to="/admin" className="inline-flex items-center text-sm font-medium text-sky-700 hover:text-sky-800">
                         Open linked bill dashboard
                         <ExternalLink className="ml-1 h-4 w-4" />
                       </Link>
@@ -154,10 +148,10 @@ export default function InvoiceDetailPage() {
               </Card>
 
               <Card>
-                <CardHeader className="p-4 sm:p-6">
+                <CardHeader>
                   <CardTitle>Totals</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 p-4 pt-0 text-sm sm:p-6 sm:pt-0">
+                <CardContent className="space-y-2.5 text-sm">
                   <p><span className="font-medium text-slate-900">Subtotal:</span> {formatCurrency(invoice.subtotal)}</p>
                   <p><span className="font-medium text-slate-900">Tax Amount:</span> {formatCurrency(invoice.tax_amount)}</p>
                   <p><span className="font-medium text-slate-900">Discount Amount:</span> {formatCurrency(invoice.discount_amount)}</p>
@@ -167,10 +161,10 @@ export default function InvoiceDetailPage() {
             </div>
 
             <Card>
-              <CardHeader className="p-4 sm:p-6">
+              <CardHeader>
                 <CardTitle>Items</CardTitle>
               </CardHeader>
-              <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+              <CardContent>
                 <TableWrapper className="rounded-xl">
                   <Table className="min-w-[520px]">
                     <THead>
@@ -196,27 +190,27 @@ export default function InvoiceDetailPage() {
               </CardContent>
             </Card>
 
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
               <Card>
-                <CardHeader className="p-4 sm:p-6">
+                <CardHeader>
                   <CardTitle>Notes</CardTitle>
                 </CardHeader>
-                <CardContent className="p-4 pt-0 text-sm text-slate-700 sm:p-6 sm:pt-0">
+                <CardContent className="text-sm text-slate-700">
                   {invoice.notes || "—"}
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader className="p-4 sm:p-6">
+                <CardHeader>
                   <CardTitle>Terms</CardTitle>
                 </CardHeader>
-                <CardContent className="p-4 pt-0 text-sm text-slate-700 sm:p-6 sm:pt-0">
+                <CardContent className="text-sm text-slate-700">
                   {invoice.terms || "—"}
                 </CardContent>
               </Card>
             </div>
 
-            <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 p-3 backdrop-blur sm:hidden">
+            <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 p-2.5 backdrop-blur sm:hidden">
               <div className="mx-auto flex max-w-3xl gap-2">
                 <Button className="flex-1" variant="outline" onClick={() => navigate("/invoices")}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
@@ -233,7 +227,7 @@ export default function InvoiceDetailPage() {
               </div>
             </div>
 
-            <div className="h-20 sm:hidden" />
+            <div className="h-16 sm:hidden" />
           </>
         )}
       </div>

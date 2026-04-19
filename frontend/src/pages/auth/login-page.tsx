@@ -49,13 +49,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,rgba(139,92,246,0.12),transparent_35%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] px-4 py-10">
-      <Card className="w-full max-w-md border-white/70 shadow-xl shadow-indigo-100/50">
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,rgba(186,230,253,0.95),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#f0f9ff_100%)] px-4 py-10">
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_20%_20%,rgba(125,211,252,0.2),transparent_20%),radial-gradient(circle_at_80%_10%,rgba(56,189,248,0.12),transparent_24%)]" />
+
+      <Card className="relative w-full max-w-md border-white/70 shadow-[0_20px_50px_rgba(14,165,233,0.14)]">
         <CardHeader className="items-center text-center">
-          <div className="mb-4 rounded-2xl bg-linear-to-r from-indigo-500 via-violet-500 to-fuchsia-500 p-3 text-white shadow-md">
+          <div className="mb-4 rounded-2xl bg-[linear-gradient(135deg,#7dd3fc,#38bdf8,#0ea5e9)] p-3 text-white shadow-[0_10px_30px_rgba(56,189,248,0.22)]">
             <ShieldCheck className="h-7 w-7" />
           </div>
-          <CardTitle className="text-2xl font-bold">Debt Recovery Portal</CardTitle>
+          <CardTitle className="text-2xl font-bold tracking-tight">Debt Recovery Portal</CardTitle>
           <p className="text-sm text-slate-500">Sign in to access your operations workspace</p>
         </CardHeader>
 
@@ -76,6 +78,7 @@ export default function LoginPage() {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
+                  className="pr-10"
                   {...form.register("password")}
                 />
                 <button

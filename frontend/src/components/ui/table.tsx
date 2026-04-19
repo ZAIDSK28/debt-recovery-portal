@@ -1,10 +1,16 @@
-// src/components/ui/table.tsx
-
 import type { HTMLAttributes, TableHTMLAttributes, ThHTMLAttributes, TdHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 export function TableWrapper({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("w-full overflow-x-auto rounded-2xl border border-slate-200 bg-white", className)} {...props} />;
+  return (
+    <div
+      className={cn(
+        "w-full overflow-x-auto rounded-[18px] border border-slate-200 bg-white shadow-sm",
+        className
+      )}
+      {...props}
+    />
+  );
 }
 
 export function Table({ className, ...props }: TableHTMLAttributes<HTMLTableElement>) {
@@ -16,14 +22,14 @@ export function THead({ className, ...props }: HTMLAttributes<HTMLTableSectionEl
 }
 
 export function TBody({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
-  return <tbody className={cn("[&_tr:nth-child(even)]:bg-slate-50/40", className)} {...props} />;
+  return <tbody className={cn(className)} {...props} />;
 }
 
 export function TH({ className, ...props }: ThHTMLAttributes<HTMLTableCellElement>) {
   return (
     <th
       className={cn(
-        "whitespace-nowrap px-3 py-3 text-left text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500 sm:px-4",
+        "whitespace-nowrap border-b border-slate-200 px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500 sm:px-4",
         className
       )}
       {...props}
@@ -32,5 +38,13 @@ export function TH({ className, ...props }: ThHTMLAttributes<HTMLTableCellElemen
 }
 
 export function TD({ className, ...props }: TdHTMLAttributes<HTMLTableCellElement>) {
-  return <td className={cn("whitespace-nowrap px-3 py-3 text-sm text-slate-700 sm:px-4", className)} {...props} />;
+  return (
+    <td
+      className={cn(
+        "whitespace-nowrap px-3 py-2.5 text-sm text-slate-700 sm:px-4",
+        className
+      )}
+      {...props}
+    />
+  );
 }

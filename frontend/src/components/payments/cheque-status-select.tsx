@@ -27,7 +27,7 @@ export function ChequeStatusSelect({
 
   return (
     <Select value={value} onValueChange={handleChange}>
-      <SelectTrigger className="w-[150px]">
+      <SelectTrigger className="w-[138px]">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

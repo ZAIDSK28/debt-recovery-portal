@@ -1,6 +1,7 @@
 # reports/views.py
 
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, views
 from rest_framework.response import Response
 from weasyprint import HTML
@@ -19,14 +20,12 @@ from reports.serializers import (
 
 def build_invoice_html(invoice):
     items_rows = "".join([
-        f"""
-        <tr>
+        f"""<tr>
           <td>{item.description}</td>
           <td class="r">{item.quantity}</td>
           <td class="r">{item.rate}</td>
           <td class="r">{item.amount}</td>
-        </tr>
-        """
+        </tr>"""
         for item in invoice.items.all()
     ])
 
@@ -250,7 +249,7 @@ def build_invoice_html(invoice):
       </div>
       <div class="totals-line">
         <span class="tl-label">Discount</span>
-        <span class="tl-value">− {invoice.discount_amount}</span>
+        <span class="tl-value">- {invoice.discount_amount}</span>
       </div>
       <div class="totals-line grand">
         <span class="tl-label">Total Due</span>
@@ -329,7 +328,10 @@ class PrintableInvoicePrintView(views.APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request, pk, *args, **kwargs):
-        invoice = PrintableInvoice.objects.prefetch_related("items").get(pk=pk)
+        invoice = get_object_or_404(
+            PrintableInvoice.objects.prefetch_related("items"),
+            pk=pk,
+        )
         html = build_invoice_html(invoice)
         return HttpResponse(html, content_type="text/html; charset=utf-8")
 
@@ -339,7 +341,10 @@ class PrintableInvoicePDFView(views.APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request, pk, *args, **kwargs):
-        invoice = PrintableInvoice.objects.prefetch_related("items").get(pk=pk)
+        invoice = get_object_or_404(
+            PrintableInvoice.objects.prefetch_related("items"),
+            pk=pk,
+        )
         html = build_invoice_html(invoice)
 
         pdf_bytes = HTML(string=html, base_url=request.build_absolute_uri("/")).write_pdf()

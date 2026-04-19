@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { z } from "zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -61,7 +61,9 @@ export function BillFormModal({
     },
   });
 
-  const watchedRouteId = form.watch("route_id");
+  const watchedRouteId = useWatch({ control: form.control, name: "route_id" });
+  const assignedTo = useWatch({ control: form.control, name: "assigned_to" });
+
   const effectiveRouteId = watchedRouteId
     ? Number(watchedRouteId)
     : bill?.route_id
@@ -168,7 +170,7 @@ export function BillFormModal({
               <Label>Route</Label>
               <Combobox
                 options={routeOptions}
-                value={form.watch("route_id")}
+                value={watchedRouteId}
                 placeholder="Select route"
                 searchPlaceholder="Search routes..."
                 onChange={(value) => {
@@ -188,7 +190,7 @@ export function BillFormModal({
               <Label>Outlet</Label>
               <Combobox
                 options={outletOptions}
-                value={form.watch("outlet")}
+                value={form.getValues("outlet")}
                 placeholder={effectiveRouteId ? "Select outlet" : "Choose route first"}
                 searchPlaceholder="Search outlets..."
                 disabled={!effectiveRouteId}
@@ -218,7 +220,7 @@ export function BillFormModal({
             <div className="space-y-2 md:col-span-2">
               <Label>Assign to Agent</Label>
               <Select
-                value={form.watch("assigned_to") ?? "unassigned"}
+                value={assignedTo ?? "unassigned"}
                 onValueChange={(value) => form.setValue("assigned_to", value)}
               >
                 <SelectTrigger>

@@ -1,3 +1,5 @@
+# debt_recovery_portal/settings.py
+
 from __future__ import annotations
 
 import os
@@ -104,6 +106,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://zaidshaikh28.pythonanywhere.com"
+
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -127,6 +130,7 @@ REST_FRAMEWORK = {
         "rest_framework.filters.OrderingFilter",
         "rest_framework.filters.SearchFilter",
     ),
+    "EXCEPTION_HANDLER": "core.exceptions.custom_exception_handler",
     "DEFAULT_THROTTLE_RATES": {
         "login": "10/min",
         "otp_verify": "10/min",
@@ -161,6 +165,3 @@ EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@example.com")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 OTP_EXPIRY_MINUTES = int(os.getenv("OTP_EXPIRY_MINUTES", "10"))
-
-
-

@@ -1,7 +1,5 @@
-// src/components/invoices/invoice-form.tsx
-
-import { useEffect, useMemo } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { memo, useEffect, useMemo } from "react";
+import { useFieldArray, useForm, useWatch, type Control, type UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Printer, Trash2 } from "lucide-react";
@@ -100,6 +98,93 @@ function parseMoney(value: string): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+const InvoiceItemRow = memo(function InvoiceItemRow({
+  index,
+  control,
+  form,
+  remove,
+  disableRemove,
+}: {
+  index: number;
+  control: Control<InvoiceFormValues>;
+  form: UseFormReturn<InvoiceFormValues>;
+  remove: (index: number) => void;
+  disableRemove: boolean;
+}) {
+  const item = useWatch({
+    control,
+    name: `items.${index}`,
+  });
+
+  function updateField(key: "description" | "quantity" | "rate", value: string) {
+    form.setValue(`items.${index}.${key}`, value, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+
+    const current = form.getValues(`items.${index}`);
+    const quantity = parseMoney(key === "quantity" ? value : current.quantity);
+    const rate = parseMoney(key === "rate" ? value : current.rate);
+    const amount = toMoneyString(quantity * rate);
+
+    form.setValue(`items.${index}.amount`, amount, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:border-sky-200 hover:bg-sky-50/30 lg:grid-cols-12">
+      <div className="space-y-2 lg:col-span-5">
+        <Label>Description</Label>
+        <Input
+          value={item?.description ?? ""}
+          onChange={(event) => updateField("description", event.target.value)}
+        />
+      </div>
+
+      <div className="space-y-2 sm:max-w-[180px] lg:col-span-2 lg:max-w-none">
+        <Label>Quantity</Label>
+        <Input
+          type="number"
+          step="0.01"
+          value={item?.quantity ?? ""}
+          onChange={(event) => updateField("quantity", event.target.value)}
+        />
+      </div>
+
+      <div className="space-y-2 sm:max-w-[180px] lg:col-span-2 lg:max-w-none">
+        <Label>Rate</Label>
+        <Input
+          type="number"
+          step="0.01"
+          value={item?.rate ?? ""}
+          onChange={(event) => updateField("rate", event.target.value)}
+        />
+      </div>
+
+      <div className="space-y-2 sm:max-w-[180px] lg:col-span-2 lg:max-w-none">
+        <Label>Amount</Label>
+        <Input value={item?.amount ?? ""} readOnly />
+      </div>
+
+      <div className="flex items-end lg:col-span-1">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={() => remove(index)}
+          disabled={disableRemove}
+        >
+          <Trash2 className="h-4 w-4 text-red-500" />
+        </Button>
+      </div>
+    </div>
+  );
+});
+
 export function InvoiceForm({
   onCreated,
   onCreatedAndView,
@@ -145,11 +230,12 @@ export function InvoiceForm({
     name: "items",
   });
 
-  const watchedItems = form.watch("items");
-  const taxAmount = form.watch("tax_amount");
-  const discountAmount = form.watch("discount_amount");
-  const creationMode = form.watch("creation_mode");
-  const selectedRouteName = form.watch("route_name");
+  const watchedItems = useWatch({ control: form.control, name: "items" }) ?? [];
+  const taxAmount = useWatch({ control: form.control, name: "tax_amount" }) ?? "0.00";
+  const discountAmount = useWatch({ control: form.control, name: "discount_amount" }) ?? "0.00";
+  const creationMode = useWatch({ control: form.control, name: "creation_mode" });
+  const selectedRouteName = useWatch({ control: form.control, name: "route_name" });
+  const selectedOutletName = useWatch({ control: form.control, name: "outlet_name" });
 
   const selectedRoute = useMemo(
     () => routes.find((route) => route.name === selectedRouteName),
@@ -168,35 +254,27 @@ export function InvoiceForm({
     [outlets]
   );
 
+  const subtotalValue = useMemo(
+    () => watchedItems.reduce((sum, item) => sum + parseMoney(item?.amount ?? "0"), 0),
+    [watchedItems]
+  );
+
+  const totalValue = useMemo(
+    () => subtotalValue + parseMoney(taxAmount) - parseMoney(discountAmount),
+    [subtotalValue, taxAmount, discountAmount]
+  );
+
   useEffect(() => {
-    const subtotal = watchedItems.reduce((sum, item) => sum + parseMoney(item.amount), 0);
-    const total = subtotal + parseMoney(taxAmount) - parseMoney(discountAmount);
-
-    form.setValue("subtotal", toMoneyString(subtotal), { shouldValidate: true });
-    form.setValue("total_amount", toMoneyString(total), { shouldValidate: true });
-  }, [watchedItems, taxAmount, discountAmount, form]);
-
-  function handleItemValueChange(index: number, key: "description" | "quantity" | "rate", value: string) {
-    const current = form.getValues(`items.${index}`);
-    const next = {
-      ...current,
-      [key]: value,
-    };
-
-    const quantity = parseMoney(key === "quantity" ? value : current.quantity);
-    const rate = parseMoney(key === "rate" ? value : current.rate);
-    next.amount = toMoneyString(quantity * rate);
-
-    form.setValue(`items.${index}`, next, {
-      shouldDirty: true,
-      shouldTouch: true,
-      shouldValidate: true,
-    });
-  }
+    form.setValue("subtotal", toMoneyString(subtotalValue), { shouldValidate: true });
+    form.setValue("total_amount", toMoneyString(totalValue), { shouldValidate: true });
+  }, [subtotalValue, totalValue, form]);
 
   async function submitForm(mode: SubmitMode) {
     const parsed = await form.trigger();
-    if (!parsed) return;
+    if (!parsed) {
+      toast.error("Please correct the highlighted fields before continuing.");
+      return;
+    }
 
     try {
       const values = form.getValues();
@@ -205,13 +283,15 @@ export function InvoiceForm({
       };
 
       const created = await createMutation.mutateAsync(payload);
-      toast.success(
-        created.linked_bill_id
-          ? `Invoice created. Dashboard bill created: #${created.linked_bill_id}`
-          : "Invoice created successfully"
-      );
+
+      if (created.linked_bill_id) {
+        toast.success(`Invoice created. Dashboard bill created: #${created.linked_bill_id}`);
+      } else {
+        toast.success("Invoice created successfully");
+      }
 
       if (mode === "save_and_view") {
+        toast.info("Opening printable invoice view.");
         onCreatedAndView?.(created);
         return;
       }
@@ -316,7 +396,7 @@ export function InvoiceForm({
             <Label>Route</Label>
             <Combobox
               options={routeOptions}
-              value={form.watch("route_name")}
+              value={selectedRouteName}
               placeholder="Select route"
               searchPlaceholder="Search routes..."
               onChange={(value) => {
@@ -336,7 +416,7 @@ export function InvoiceForm({
             <Label>Outlet</Label>
             <Combobox
               options={outletOptions}
-              value={form.watch("outlet_name")}
+              value={selectedOutletName}
               placeholder={selectedRoute ? "Select outlet" : "Choose route first"}
               searchPlaceholder="Search outlets..."
               disabled={!selectedRoute}
@@ -365,52 +445,14 @@ export function InvoiceForm({
         </CardHeader>
         <CardContent className="space-y-4">
           {fields.map((field, index) => (
-            <div key={field.id} className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 p-4 lg:grid-cols-12">
-              <div className="space-y-2 lg:col-span-5">
-                <Label>Description</Label>
-                <Input
-                  value={form.watch(`items.${index}.description`)}
-                  onChange={(event) => handleItemValueChange(index, "description", event.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2 sm:max-w-[180px] lg:col-span-2 lg:max-w-none">
-                <Label>Quantity</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={form.watch(`items.${index}.quantity`)}
-                  onChange={(event) => handleItemValueChange(index, "quantity", event.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2 sm:max-w-[180px] lg:col-span-2 lg:max-w-none">
-                <Label>Rate</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={form.watch(`items.${index}.rate`)}
-                  onChange={(event) => handleItemValueChange(index, "rate", event.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2 sm:max-w-[180px] lg:col-span-2 lg:max-w-none">
-                <Label>Amount</Label>
-                <Input value={form.watch(`items.${index}.amount`)} readOnly />
-              </div>
-
-              <div className="flex items-end lg:col-span-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => remove(index)}
-                  disabled={fields.length === 1}
-                >
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </Button>
-              </div>
-            </div>
+            <InvoiceItemRow
+              key={field.id}
+              index={index}
+              control={form.control}
+              form={form}
+              remove={remove}
+              disableRemove={fields.length === 1}
+            />
           ))}
 
           <Button
@@ -443,7 +485,7 @@ export function InvoiceForm({
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="space-y-2">
             <Label htmlFor="subtotal">Subtotal</Label>
-            <Input id="subtotal" {...form.register("subtotal")} readOnly />
+            <Input id="subtotal" value={toMoneyString(subtotalValue)} readOnly />
           </div>
 
           <div className="space-y-2">
@@ -458,7 +500,7 @@ export function InvoiceForm({
 
           <div className="space-y-2">
             <Label htmlFor="total_amount">Grand Total</Label>
-            <Input id="total_amount" {...form.register("total_amount")} readOnly />
+            <Input id="total_amount" value={toMoneyString(totalValue)} readOnly />
             {form.formState.errors.total_amount ? (
               <p className="text-sm text-red-500">{form.formState.errors.total_amount.message}</p>
             ) : null}
@@ -483,14 +525,16 @@ export function InvoiceForm({
         </CardContent>
       </Card>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-        <Button type="button" className="w-full sm:w-auto" onClick={() => void submitForm("save")} disabled={createMutation.isPending}>
-          {createMutation.isPending ? "Saving..." : "Save Invoice"}
-        </Button>
-        <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => void submitForm("save_and_view")} disabled={createMutation.isPending}>
-          <Printer className="mr-2 h-4 w-4" />
-          {createMutation.isPending ? "Saving..." : "Save & View"}
-        </Button>
+      <div className="sticky bottom-3 z-10 rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-lg backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <Button type="button" className="w-full sm:w-auto" onClick={() => void submitForm("save")} disabled={createMutation.isPending}>
+            {createMutation.isPending ? "Saving..." : "Save Invoice"}
+          </Button>
+          <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => void submitForm("save_and_view")} disabled={createMutation.isPending}>
+            <Printer className="mr-2 h-4 w-4" />
+            {createMutation.isPending ? "Saving..." : "Save & View"}
+          </Button>
+        </div>
       </div>
     </div>
   );

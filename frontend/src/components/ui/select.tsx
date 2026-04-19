@@ -16,7 +16,7 @@ export function SelectTrigger({
   return (
     <SelectPrimitive.Trigger
       className={cn(
-        "flex h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50",
+        "flex h-9 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-300 disabled:opacity-50",
         className
       )}
     >
@@ -31,7 +31,7 @@ export function SelectTrigger({
 export function SelectContent({ children }: { children: ReactNode }) {
   return (
     <SelectPrimitive.Portal>
-      <SelectPrimitive.Content className="z-50 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+      <SelectPrimitive.Content className="z-50 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_32px_rgba(15,23,42,0.12)]">
         <SelectPrimitive.Viewport className="p-1">{children}</SelectPrimitive.Viewport>
       </SelectPrimitive.Content>
     </SelectPrimitive.Portal>
@@ -48,11 +48,11 @@ export function SelectItem({
   return (
     <SelectPrimitive.Item
       value={value}
-      className="relative flex cursor-pointer select-none items-center rounded-lg py-2 pl-8 pr-3 text-sm text-slate-700 outline-none hover:bg-slate-50 focus:bg-slate-50"
+      className="relative flex min-h-8 cursor-pointer select-none items-center rounded-xl py-1.5 pl-8 pr-3 text-sm text-slate-700 outline-none hover:bg-sky-50 focus:bg-sky-50"
     >
       <span className="absolute left-2 flex h-4 w-4 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
-          <Check className="h-4 w-4" />
+          <Check className="h-4 w-4 text-sky-700" />
         </SelectPrimitive.ItemIndicator>
       </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>

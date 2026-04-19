@@ -35,7 +35,7 @@ export function AssignAgentSelect({
 
   return (
     <Select value={value} onValueChange={handleChange}>
-      <SelectTrigger className="w-[180px]">
+      <SelectTrigger className="w-[170px]">
         <SelectValue placeholder="Assign agent" />
       </SelectTrigger>
       <SelectContent>
