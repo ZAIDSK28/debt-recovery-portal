@@ -15,7 +15,12 @@ import {
   PENDING_OTP_KEY,
   setAuthStorage,
 } from "@/api/axiosInstance";
-import { loginApi, resendOtpApi, verifyOtpApi, type LoginInput } from "@/api/auth.api";
+import {
+  loginApi,
+  resendOtpApi,
+  verifyOtpApi,
+  type LoginInput,
+} from "@/api/auth.api";
 import type { LoginResponse, LoginSuccessResponse, User } from "@/types";
 
 type LoginResult =
@@ -39,7 +44,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function parseStoredUser(): User | null {
   const raw = getStoredUser();
-  if (!raw) return null;
+  if (!raw || raw === "undefined" || raw === "null") return null;
 
   try {
     return JSON.parse(raw) as User;
@@ -48,21 +53,25 @@ function parseStoredUser(): User | null {
   }
 }
 
-function isLoginSuccessResponse(response: LoginResponse): response is LoginSuccessResponse {
+function getStoredPendingOtp(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(PENDING_OTP_KEY);
+}
+
+function isLoginSuccessResponse(
+  response: LoginResponse
+): response is LoginSuccessResponse {
   return "access" in response && "refresh" in response && "user" in response;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [pendingOtpUsername, setPendingOtpUsername] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(() => parseStoredUser());
+  const [pendingOtpUsername, setPendingOtpUsername] = useState<string | null>(
+    () => getStoredPendingOtp()
+  );
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const restoredUser = parseStoredUser();
-    const restoredPendingOtp = localStorage.getItem(PENDING_OTP_KEY);
-
-    setUser(restoredUser);
-    setPendingOtpUsername(restoredPendingOtp);
     setIsLoading(false);
   }, []);
 
