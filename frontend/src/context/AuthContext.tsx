@@ -4,7 +4,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -44,7 +43,10 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function parseStoredUser(): User | null {
   const raw = getStoredUser();
-  if (!raw || raw === "undefined" || raw === "null") return null;
+
+  if (!raw || raw === "undefined" || raw === "null") {
+    return null;
+  }
 
   try {
     return JSON.parse(raw) as User;
@@ -71,29 +73,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    setIsLoading(false);
-  }, []);
-
   const login = useCallback(async (payload: LoginInput): Promise<LoginResult> => {
-    clearAuthStorage();
-    setUser(null);
-    setPendingOtpUsername(null);
+    setIsLoading(true);
 
-    const response = await loginApi(payload);
+    try {
+      const response = await loginApi(payload);
 
-    if (!isLoginSuccessResponse(response)) {
-      localStorage.setItem(PENDING_OTP_KEY, payload.username);
-      setPendingOtpUsername(payload.username);
-      return { status: "otp" };
+      if (!isLoginSuccessResponse(response)) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem(PENDING_OTP_KEY, payload.username);
+        }
+
+        setPendingOtpUsername(payload.username);
+        setUser(null);
+
+        return { status: "otp" };
+      }
+
+      setAuthStorage(
+        response.access,
+        response.refresh,
+        JSON.stringify(response.user)
+      );
+
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(PENDING_OTP_KEY);
+      }
+
+      setPendingOtpUsername(null);
+      setUser(response.user);
+
+      return { status: "authenticated", user: response.user };
+    } finally {
+      setIsLoading(false);
     }
-
-    setAuthStorage(response.access, response.refresh, JSON.stringify(response.user));
-    localStorage.removeItem(PENDING_OTP_KEY);
-    setPendingOtpUsername(null);
-    setUser(response.user);
-
-    return { status: "authenticated", user: response.user };
   }, []);
 
   const verifyOtp = useCallback(
@@ -102,31 +115,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("No pending OTP verification found.");
       }
 
-      const response = await verifyOtpApi({
-        username: pendingOtpUsername,
-        otp,
-      });
+      setIsLoading(true);
 
-      setAuthStorage(response.access, response.refresh, JSON.stringify(response.user));
-      localStorage.removeItem(PENDING_OTP_KEY);
-      setPendingOtpUsername(null);
-      setUser(response.user);
+      try {
+        const response = await verifyOtpApi({
+          username: pendingOtpUsername,
+          otp,
+        });
 
-      return response.user;
+        setAuthStorage(
+          response.access,
+          response.refresh,
+          JSON.stringify(response.user)
+        );
+
+        if (typeof window !== "undefined") {
+          localStorage.removeItem(PENDING_OTP_KEY);
+        }
+
+        setPendingOtpUsername(null);
+        setUser(response.user);
+
+        return response.user;
+      } finally {
+        setIsLoading(false);
+      }
     },
     [pendingOtpUsername]
   );
 
-  const resendOtp = useCallback(async () => {
+  const resendOtp = useCallback(async (): Promise<void> => {
     if (!pendingOtpUsername) {
       throw new Error("No pending OTP verification found.");
     }
 
-    await resendOtpApi(pendingOtpUsername);
+    setIsLoading(true);
+
+    try {
+      await resendOtpApi(pendingOtpUsername);
+    } finally {
+      setIsLoading(false);
+    }
   }, [pendingOtpUsername]);
 
   const logout = useCallback(() => {
     clearAuthStorage();
+
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(PENDING_OTP_KEY);
+    }
+
     setUser(null);
     setPendingOtpUsername(null);
   }, []);
@@ -152,8 +190,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext);
+
   if (!context) {
     throw new Error("useAuth must be used within AuthProvider");
   }
+
   return context;
 }
