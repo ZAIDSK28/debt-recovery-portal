@@ -229,7 +229,7 @@ export function InvoiceForm({
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Invoice Info</CardTitle>
@@ -365,8 +365,8 @@ export function InvoiceForm({
         </CardHeader>
         <CardContent className="space-y-4">
           {fields.map((field, index) => (
-            <div key={field.id} className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 p-4 md:grid-cols-12">
-              <div className="space-y-2 md:col-span-5">
+            <div key={field.id} className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 p-4 lg:grid-cols-12">
+              <div className="space-y-2 lg:col-span-5">
                 <Label>Description</Label>
                 <Input
                   value={form.watch(`items.${index}.description`)}
@@ -374,7 +374,7 @@ export function InvoiceForm({
                 />
               </div>
 
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2 sm:max-w-[180px] lg:col-span-2 lg:max-w-none">
                 <Label>Quantity</Label>
                 <Input
                   type="number"
@@ -384,7 +384,7 @@ export function InvoiceForm({
                 />
               </div>
 
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2 sm:max-w-[180px] lg:col-span-2 lg:max-w-none">
                 <Label>Rate</Label>
                 <Input
                   type="number"
@@ -394,12 +394,12 @@ export function InvoiceForm({
                 />
               </div>
 
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2 sm:max-w-[180px] lg:col-span-2 lg:max-w-none">
                 <Label>Amount</Label>
                 <Input value={form.watch(`items.${index}.amount`)} readOnly />
               </div>
 
-              <div className="flex items-end md:col-span-1">
+              <div className="flex items-end lg:col-span-1">
                 <Button
                   type="button"
                   variant="outline"
@@ -416,6 +416,7 @@ export function InvoiceForm({
           <Button
             type="button"
             variant="outline"
+            className="w-full sm:w-auto"
             onClick={() =>
               append({
                 description: "",
@@ -439,7 +440,7 @@ export function InvoiceForm({
         <CardHeader>
           <CardTitle>Totals</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="space-y-2">
             <Label htmlFor="subtotal">Subtotal</Label>
             <Input id="subtotal" {...form.register("subtotal")} readOnly />
@@ -469,7 +470,7 @@ export function InvoiceForm({
         <CardHeader>
           <CardTitle>Footer</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <CardContent className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="notes">Notes</Label>
             <Textarea id="notes" {...form.register("notes")} />
@@ -482,11 +483,11 @@ export function InvoiceForm({
         </CardContent>
       </Card>
 
-      <div className="flex flex-wrap justify-end gap-3">
-        <Button type="button" onClick={() => void submitForm("save")} disabled={createMutation.isPending}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+        <Button type="button" className="w-full sm:w-auto" onClick={() => void submitForm("save")} disabled={createMutation.isPending}>
           {createMutation.isPending ? "Saving..." : "Save Invoice"}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void submitForm("save_and_view")} disabled={createMutation.isPending}>
+        <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => void submitForm("save_and_view")} disabled={createMutation.isPending}>
           <Printer className="mr-2 h-4 w-4" />
           {createMutation.isPending ? "Saving..." : "Save & View"}
         </Button>

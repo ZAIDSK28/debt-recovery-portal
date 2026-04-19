@@ -11,7 +11,6 @@ import {
 } from "react";
 import {
   clearAuthStorage,
-  getStoredAccessToken,
   getStoredUser,
   PENDING_OTP_KEY,
   setAuthStorage,
@@ -59,8 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const restoredAccessToken = getStoredAccessToken();
-    const restoredUser = restoredAccessToken ? parseStoredUser() : null;
+    const restoredUser = parseStoredUser();
     const restoredPendingOtp = localStorage.getItem(PENDING_OTP_KEY);
 
     setUser(restoredUser);

@@ -69,23 +69,23 @@ export default function InvoiceDetailPage() {
 
   return (
     <AppShell title="Invoice Detail">
-      <div className="space-y-6">
+      <div className="space-y-5 sm:space-y-6">
         <PageHeader
           title={invoice ? `Invoice ${invoice.invoice_number}` : "Invoice Detail"}
           description="View printable invoice details and linked bill information."
           actions={
-            <div className="flex flex-wrap gap-3">
-              <Button variant="outline" onClick={() => navigate("/invoices")}>
+            <div className="hidden sm:flex sm:w-auto sm:flex-row sm:flex-wrap sm:gap-3">
+              <Button className="w-full sm:w-auto" variant="outline" onClick={() => navigate("/invoices")}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to List
               </Button>
               {invoice ? (
                 <>
-                  <Button onClick={() => void handlePrint()}>
+                  <Button className="w-full sm:w-auto" onClick={() => void handlePrint()}>
                     <Printer className="mr-2 h-4 w-4" />
                     Print
                   </Button>
-                  <Button variant="outline" onClick={() => void handleDownloadPdf()}>
+                  <Button className="w-full sm:w-auto" variant="outline" onClick={() => void handleDownloadPdf()}>
                     <Download className="mr-2 h-4 w-4" />
                     Download PDF
                   </Button>
@@ -105,13 +105,13 @@ export default function InvoiceDetailPage() {
           <EmptyState title="Invoice not found" description="The requested invoice could not be loaded." />
         ) : (
           <>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
               <Card>
-                <CardHeader>
+                <CardHeader className="p-4 sm:p-6">
                   <CardTitle>Invoice Header</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                  <p><span className="font-medium text-slate-900">Invoice Number:</span> {invoice.invoice_number}</p>
+                <CardContent className="space-y-3 p-4 pt-0 text-sm sm:p-6 sm:pt-0">
+                  <p className="break-words"><span className="font-medium text-slate-900">Invoice Number:</span> {invoice.invoice_number}</p>
                   <p><span className="font-medium text-slate-900">Invoice Date:</span> {formatDate(invoice.invoice_date)}</p>
                   <p><span className="font-medium text-slate-900">Creation Mode:</span> {invoice.creation_mode.replaceAll("_", " ")}</p>
                   <p><span className="font-medium text-slate-900">Created At:</span> {formatDate(invoice.created_at)}</p>
@@ -123,25 +123,25 @@ export default function InvoiceDetailPage() {
               </Card>
 
               <Card>
-                <CardHeader>
+                <CardHeader className="p-4 sm:p-6">
                   <CardTitle>Customer Details</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                  <p><span className="font-medium text-slate-900">Customer Name:</span> {invoice.customer_name}</p>
+                <CardContent className="space-y-3 p-4 pt-0 text-sm sm:p-6 sm:pt-0">
+                  <p className="break-words"><span className="font-medium text-slate-900">Customer Name:</span> {invoice.customer_name}</p>
                   <p><span className="font-medium text-slate-900">Phone:</span> {invoice.customer_phone || "—"}</p>
-                  <p><span className="font-medium text-slate-900">GST Number:</span> {invoice.gst_number || "—"}</p>
-                  <p><span className="font-medium text-slate-900">Address:</span> {invoice.customer_address || "—"}</p>
+                  <p className="break-words"><span className="font-medium text-slate-900">GST Number:</span> {invoice.gst_number || "—"}</p>
+                  <p className="break-words"><span className="font-medium text-slate-900">Address:</span> {invoice.customer_address || "—"}</p>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader>
+                <CardHeader className="p-4 sm:p-6">
                   <CardTitle>Bill Mapping</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                  <p><span className="font-medium text-slate-900">Route Name:</span> {invoice.route_name || "—"}</p>
-                  <p><span className="font-medium text-slate-900">Outlet Name:</span> {invoice.outlet_name || "—"}</p>
-                  <p><span className="font-medium text-slate-900">Brand:</span> {invoice.brand || "—"}</p>
+                <CardContent className="space-y-3 p-4 pt-0 text-sm sm:p-6 sm:pt-0">
+                  <p className="break-words"><span className="font-medium text-slate-900">Route Name:</span> {invoice.route_name || "—"}</p>
+                  <p className="break-words"><span className="font-medium text-slate-900">Outlet Name:</span> {invoice.outlet_name || "—"}</p>
+                  <p className="break-words"><span className="font-medium text-slate-900">Brand:</span> {invoice.brand || "—"}</p>
                   {invoice.linked_bill_id ? (
                     <div className="pt-2">
                       <Link to="/admin" className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-700">
@@ -154,10 +154,10 @@ export default function InvoiceDetailPage() {
               </Card>
 
               <Card>
-                <CardHeader>
+                <CardHeader className="p-4 sm:p-6">
                   <CardTitle>Totals</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 text-sm">
+                <CardContent className="space-y-3 p-4 pt-0 text-sm sm:p-6 sm:pt-0">
                   <p><span className="font-medium text-slate-900">Subtotal:</span> {formatCurrency(invoice.subtotal)}</p>
                   <p><span className="font-medium text-slate-900">Tax Amount:</span> {formatCurrency(invoice.tax_amount)}</p>
                   <p><span className="font-medium text-slate-900">Discount Amount:</span> {formatCurrency(invoice.discount_amount)}</p>
@@ -167,12 +167,12 @@ export default function InvoiceDetailPage() {
             </div>
 
             <Card>
-              <CardHeader>
+              <CardHeader className="p-4 sm:p-6">
                 <CardTitle>Items</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
                 <TableWrapper className="rounded-xl">
-                  <Table>
+                  <Table className="min-w-[520px]">
                     <THead>
                       <tr>
                         <TH>Description</TH>
@@ -184,7 +184,7 @@ export default function InvoiceDetailPage() {
                     <TBody>
                       {invoice.items.map((item) => (
                         <tr key={item.id} className="border-t border-slate-100">
-                          <TD>{item.description}</TD>
+                          <TD className="max-w-[220px] whitespace-normal break-words">{item.description}</TD>
                           <TD>{item.quantity}</TD>
                           <TD>{formatCurrency(item.rate)}</TD>
                           <TD>{formatCurrency(item.amount)}</TD>
@@ -196,25 +196,44 @@ export default function InvoiceDetailPage() {
               </CardContent>
             </Card>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
               <Card>
-                <CardHeader>
+                <CardHeader className="p-4 sm:p-6">
                   <CardTitle>Notes</CardTitle>
                 </CardHeader>
-                <CardContent className="text-sm text-slate-700">
+                <CardContent className="p-4 pt-0 text-sm text-slate-700 sm:p-6 sm:pt-0">
                   {invoice.notes || "—"}
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader>
+                <CardHeader className="p-4 sm:p-6">
                   <CardTitle>Terms</CardTitle>
                 </CardHeader>
-                <CardContent className="text-sm text-slate-700">
+                <CardContent className="p-4 pt-0 text-sm text-slate-700 sm:p-6 sm:pt-0">
                   {invoice.terms || "—"}
                 </CardContent>
               </Card>
             </div>
+
+            <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 p-3 backdrop-blur sm:hidden">
+              <div className="mx-auto flex max-w-3xl gap-2">
+                <Button className="flex-1" variant="outline" onClick={() => navigate("/invoices")}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+                <Button className="flex-1" onClick={() => void handlePrint()}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print
+                </Button>
+                <Button className="flex-1" variant="outline" onClick={() => void handleDownloadPdf()}>
+                  <Download className="mr-2 h-4 w-4" />
+                  PDF
+                </Button>
+              </div>
+            </div>
+
+            <div className="h-20 sm:hidden" />
           </>
         )}
       </div>

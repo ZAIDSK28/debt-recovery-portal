@@ -1,7 +1,7 @@
 // src/pages/admin/admin-dashboard-page.tsx
 
 import { useMemo, useState } from "react";
-import { Download, FileSpreadsheet, HandCoins, Landmark, Plus, ReceiptIndianRupee, Wallet } from "lucide-react";
+import { Download, FileSpreadsheet, Filter, HandCoins, Landmark, Plus, ReceiptIndianRupee, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/page-header";
@@ -30,6 +30,7 @@ export default function AdminDashboardPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
   const [ordering] = useState("-created_at");
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const [billExportStartDate, setBillExportStartDate] = useState("");
   const [billExportEndDate, setBillExportEndDate] = useState("");
@@ -57,6 +58,7 @@ export default function AdminDashboardPage() {
     () => (
       <>
         <Button
+          className="w-full sm:w-auto"
           onClick={() => {
             setEditingBill(null);
             setIsBillModalOpen(true);
@@ -65,11 +67,12 @@ export default function AdminDashboardPage() {
           <Plus className="mr-2 h-4 w-4" />
           New Bill
         </Button>
-        <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+        <Button className="w-full sm:w-auto" variant="outline" onClick={() => setIsImportOpen(true)}>
           <FileSpreadsheet className="mr-2 h-4 w-4" />
           Import Bills
         </Button>
         <Button
+          className="w-full sm:w-auto"
           variant="outline"
           onClick={async () => {
             if (billExportStartDate && billExportEndDate && billExportStartDate > billExportEndDate) {
@@ -111,7 +114,7 @@ export default function AdminDashboardPage() {
           actions={actions}
         />
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard
             title="Today Cash Collection"
             value={formatCurrency(totalsQuery.data?.cash_total ?? 0)}
@@ -139,12 +142,12 @@ export default function AdminDashboardPage() {
         </div>
 
         {dailySummaryQuery.isLoading ? (
-          <Skeleton className="h-105 w-full rounded-2xl" />
+          <Skeleton className="h-[320px] w-full rounded-2xl sm:h-[420px]" />
         ) : (
           <DailyCollectionsChart data={dailySummaryQuery.data ?? []} />
         )}
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="w-full max-w-sm">
               <SearchInput
@@ -156,9 +159,19 @@ export default function AdminDashboardPage() {
                 }}
               />
             </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full md:hidden"
+              onClick={() => setShowMobileFilters((prev) => !prev)}
+            >
+              <Filter className="mr-2 h-4 w-4" />
+              {showMobileFilters ? "Hide Filters" : "Show Filters"}
+            </Button>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className={`grid grid-cols-1 gap-4 lg:grid-cols-3 ${showMobileFilters ? "block" : "hidden md:grid"}`}>
             <div>
               <label className="mb-2 block text-sm font-medium text-slate-700">Export Start Date</label>
               <Input type="date" value={billExportStartDate} onChange={(e) => setBillExportStartDate(e.target.value)} />
@@ -169,6 +182,7 @@ export default function AdminDashboardPage() {
             </div>
             <div className="flex items-end">
               <Button
+                className="w-full sm:w-auto"
                 variant="outline"
                 onClick={() => {
                   setBillExportStartDate("");
@@ -183,9 +197,13 @@ export default function AdminDashboardPage() {
 
         {billsQuery.isLoading ? (
           <div className="space-y-3">
-            <Skeleton className="h-14 w-full" />
-            <Skeleton className="h-14 w-full" />
-            <Skeleton className="h-14 w-full" />
+            <Skeleton className="h-28 w-full lg:hidden" />
+            <Skeleton className="h-28 w-full lg:hidden" />
+            <div className="hidden space-y-3 lg:block">
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-14 w-full" />
+            </div>
           </div>
         ) : invoices.length === 0 ? (
           <EmptyState
@@ -208,6 +226,27 @@ export default function AdminDashboardPage() {
           />
         )}
       </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 p-3 backdrop-blur md:hidden">
+        <div className="mx-auto flex max-w-3xl gap-2">
+          <Button
+            className="flex-1"
+            onClick={() => {
+              setEditingBill(null);
+              setIsBillModalOpen(true);
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            New Bill
+          </Button>
+          <Button className="flex-1" variant="outline" onClick={() => setIsImportOpen(true)}>
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Import
+          </Button>
+        </div>
+      </div>
+
+      <div className="h-20 md:hidden" />
 
       <BillFormModal
         open={isBillModalOpen}

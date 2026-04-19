@@ -31,7 +31,7 @@ export function AppSidebar({
         collapsed ? "w-[88px] px-3" : "w-60 px-4"
       )}
     >
-      <div className={cn("mb-8", collapsed ? "px-0" : "px-2")}>
+      <div className={cn("mb-6 md:mb-8", collapsed ? "px-0" : "px-2")}>
         <div
           className={cn(
             "rounded-2xl bg-white/10 backdrop-blur",
@@ -67,7 +67,7 @@ export function AppSidebar({
             title={collapsed ? label : undefined}
           >
             <Icon className="h-4 w-4 shrink-0" />
-            {!collapsed ? <span>{label}</span> : null}
+            {!collapsed ? <span className="truncate">{label}</span> : null}
           </NavLink>
         ))}
       </nav>
@@ -80,8 +80,8 @@ export function AppSidebar({
       >
         {!collapsed ? (
           <>
-            <p className="font-semibold">{user?.full_name}</p>
-            <p className="text-white/70">{user?.username}</p>
+            <p className="truncate font-semibold">{user?.full_name}</p>
+            <p className="truncate text-white/70">{user?.username}</p>
           </>
         ) : null}
 
@@ -94,7 +94,7 @@ export function AppSidebar({
           )}
           title={collapsed ? "Sign out" : undefined}
         >
-          <LogOut className="h-4 w-4" />
+          <LogOut className="h-4 w-4 shrink-0" />
           {!collapsed ? <span>Sign out</span> : null}
         </button>
       </div>

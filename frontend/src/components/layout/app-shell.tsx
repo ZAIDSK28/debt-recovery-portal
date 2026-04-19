@@ -26,7 +26,7 @@ export function AppShell({
               className="absolute inset-0 bg-slate-950/30"
               onClick={() => setMobileOpen(false)}
             />
-            <div className="absolute left-0 top-0 h-full w-60">
+            <div className="absolute left-0 top-0 h-full w-[84vw] max-w-72">
               <AppSidebar collapsed={false} />
             </div>
           </div>
@@ -39,7 +39,7 @@ export function AppShell({
             onSidebarToggle={() => setCollapsed((prev) => !prev)}
             isSidebarCollapsed={collapsed}
           />
-          <main className={cn("flex-1 px-4 py-6 md:px-6 md:py-8")}>{children}</main>
+          <main className={cn("flex-1 px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8")}>{children}</main>
         </div>
       </div>
     </div>

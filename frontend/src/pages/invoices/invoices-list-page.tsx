@@ -35,7 +35,7 @@ export default function InvoicesListPage() {
 
   const actions = useMemo(
     () => (
-      <Button onClick={() => navigate("/invoices/new")}>
+      <Button className="w-full sm:w-auto" onClick={() => navigate("/invoices/new")}>
         <Plus className="mr-2 h-4 w-4" />
         Create Invoice
       </Button>
@@ -111,7 +111,7 @@ export default function InvoicesListPage() {
             title="No invoices found"
             description="Create a new printable invoice to get started."
             action={
-              <Button onClick={() => navigate("/invoices/new")}>
+              <Button className="w-full sm:w-auto" onClick={() => navigate("/invoices/new")}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Invoice
               </Button>
@@ -120,7 +120,7 @@ export default function InvoicesListPage() {
         ) : (
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <TableWrapper className="rounded-none border-0">
-              <Table>
+              <Table className="min-w-[1100px]">
                 <THead>
                   <tr>
                     <TH>Invoice Number</TH>
