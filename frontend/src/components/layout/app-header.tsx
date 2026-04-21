@@ -18,6 +18,7 @@ export function AppHeader({
           type="button"
           onClick={onMenuClick}
           className="rounded-xl border border-slate-200 bg-white p-1.5 text-slate-600 shadow-sm md:hidden"
+          aria-label="Open menu"
         >
           <Menu className="h-4.5 w-4.5" />
         </button>
@@ -28,10 +29,16 @@ export function AppHeader({
           className="hidden rounded-xl border border-slate-200 bg-white p-1.5 text-slate-600 shadow-sm transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 md:inline-flex"
           aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          {isSidebarCollapsed ? <PanelLeftOpen className="h-4.5 w-4.5" /> : <PanelLeftClose className="h-4.5 w-4.5" />}
+          {isSidebarCollapsed ? (
+            <PanelLeftOpen className="h-4.5 w-4.5" />
+          ) : (
+            <PanelLeftClose className="h-4.5 w-4.5" />
+          )}
         </button>
 
-        <h1 className="truncate text-[15px] font-semibold text-slate-800 sm:text-base">{title}</h1>
+        <h1 className="truncate text-[15px] font-semibold text-slate-800 sm:text-base">
+          {title}
+        </h1>
       </div>
     </header>
   );
