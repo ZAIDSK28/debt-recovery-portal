@@ -35,7 +35,13 @@ class PrintableInvoice(models.Model):
     terms = models.TextField(blank=True)
 
     creation_mode = models.CharField(max_length=30, choices=CreationMode.choices)
-    linked_bill_id = models.BigIntegerField(null=True, blank=True)
+    linked_bill = models.OneToOneField(
+        "bills.Bill",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="printable_invoice",
+    )
 
     payload = models.JSONField(default=dict, blank=True)
 

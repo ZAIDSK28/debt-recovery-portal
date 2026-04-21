@@ -1,3 +1,4 @@
+// src/pages/invoices/invoices-list-page.tsx
 import { Download, Eye, Plus, Printer, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -118,8 +119,8 @@ export default function InvoicesListPage() {
           />
         ) : (
           <div className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-sm">
-            <TableWrapper className="rounded-none border-0 shadow-none">
-              <Table className="min-w-[1100px]">
+            <TableWrapper className="w-full rounded-none border-0 shadow-none">
+              <Table className="min-w-[1320px] w-full table-auto">
                 <THead>
                   <tr>
                     <TH>Invoice Number</TH>
@@ -132,24 +133,26 @@ export default function InvoicesListPage() {
                     <TH>Creation Mode</TH>
                     <TH>Linked Bill</TH>
                     <TH>Created At</TH>
-                    <TH className="text-right">Actions</TH>
+                    <TH className="w-[290px] text-right">Actions</TH>
                   </tr>
                 </THead>
                 <TBody>
                   {rows.map((invoice) => (
-                    <tr key={invoice.id} className="border-t border-slate-100 transition-colors hover:bg-sky-50">
-                      <TD className="font-medium text-slate-900">{invoice.invoice_number}</TD>
+                    <tr key={invoice.id} className="border-t border-slate-100 align-top transition-colors hover:bg-sky-50">
+                      <TD className="whitespace-normal break-words font-medium text-slate-900">
+                        {invoice.invoice_number}
+                      </TD>
                       <TD>{formatDate(invoice.invoice_date)}</TD>
-                      <TD>{invoice.customer_name}</TD>
-                      <TD>{invoice.route_name || "—"}</TD>
-                      <TD>{invoice.outlet_name || "—"}</TD>
-                      <TD>{invoice.brand || "—"}</TD>
+                      <TD className="whitespace-normal break-words">{invoice.customer_name}</TD>
+                      <TD className="whitespace-normal break-words">{invoice.route_name || "—"}</TD>
+                      <TD className="whitespace-normal break-words">{invoice.outlet_name || "—"}</TD>
+                      <TD className="whitespace-normal break-words">{invoice.brand || "—"}</TD>
                       <TD>{formatCurrency(invoice.total_amount)}</TD>
-                      <TD className="capitalize">{invoice.creation_mode.replaceAll("_", " ")}</TD>
-                      <TD>{invoice.linked_bill_id ?? "—"}</TD>
-                      <TD>{formatDate(invoice.created_at)}</TD>
-                      <TD>
-                        <div className="flex justify-end gap-2">
+                      <TD className="whitespace-normal capitalize">{invoice.creation_mode.replaceAll("_", " ")}</TD>
+                      <TD>{invoice.linked_bill_id ? `#${invoice.linked_bill_id}` : "—"}</TD>
+                      <TD className="whitespace-nowrap">{formatDate(invoice.created_at)}</TD>
+                      <TD className="whitespace-nowrap">
+                        <div className="flex min-w-[270px] justify-end gap-2">
                           <Button variant="outline" size="sm" onClick={() => navigate(`/invoices/${invoice.id}`)}>
                             <Eye className="mr-1 h-4 w-4" />
                             View

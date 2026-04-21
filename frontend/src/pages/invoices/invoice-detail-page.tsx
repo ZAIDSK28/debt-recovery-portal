@@ -1,5 +1,6 @@
-import { ArrowLeft, Download, ExternalLink, Printer } from "lucide-react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+// src/pages/invoices/invoice-detail-page.tsx
+import { ArrowLeft, Download, Printer } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/page-header";
@@ -136,14 +137,10 @@ export default function InvoiceDetailPage() {
                   <p className="break-words"><span className="font-medium text-slate-900">Route Name:</span> {invoice.route_name || "—"}</p>
                   <p className="break-words"><span className="font-medium text-slate-900">Outlet Name:</span> {invoice.outlet_name || "—"}</p>
                   <p className="break-words"><span className="font-medium text-slate-900">Brand:</span> {invoice.brand || "—"}</p>
-                  {invoice.linked_bill_id ? (
-                    <div className="pt-1.5">
-                      <Link to="/admin" className="inline-flex items-center text-sm font-medium text-sky-700 hover:text-sky-800">
-                        Open linked bill dashboard
-                        <ExternalLink className="ml-1 h-4 w-4" />
-                      </Link>
-                    </div>
-                  ) : null}
+                  <p className="break-words">
+                    <span className="font-medium text-slate-900">Linked Bill:</span>{" "}
+                    {invoice.linked_bill_id ? `#${invoice.linked_bill_id}` : "Deleted / unavailable"}
+                  </p>
                 </CardContent>
               </Card>
 
@@ -164,24 +161,24 @@ export default function InvoiceDetailPage() {
               <CardHeader>
                 <CardTitle>Items</CardTitle>
               </CardHeader>
-              <CardContent>
-                <TableWrapper className="rounded-xl">
-                  <Table className="min-w-[520px]">
+              <CardContent className="px-0 pb-5 pt-0">
+                <TableWrapper className="w-full rounded-none border-0 shadow-none">
+                  <Table className="min-w-full table-fixed">
                     <THead>
                       <tr>
-                        <TH>Description</TH>
-                        <TH>Quantity</TH>
-                        <TH>Rate</TH>
-                        <TH>Amount</TH>
+                        <TH className="w-[46%]">Description</TH>
+                        <TH className="w-[18%]">Quantity</TH>
+                        <TH className="w-[18%]">Rate</TH>
+                        <TH className="w-[18%]">Amount</TH>
                       </tr>
                     </THead>
                     <TBody>
                       {invoice.items.map((item) => (
-                        <tr key={item.id} className="border-t border-slate-100">
-                          <TD className="max-w-[220px] whitespace-normal break-words">{item.description}</TD>
+                        <tr key={item.id} className="border-t border-slate-100 align-top">
+                          <TD className="whitespace-normal break-words">{item.description}</TD>
                           <TD>{item.quantity}</TD>
                           <TD>{formatCurrency(item.rate)}</TD>
-                          <TD>{formatCurrency(item.amount)}</TD>
+                          <TD className="font-medium">{formatCurrency(item.amount)}</TD>
                         </tr>
                       ))}
                     </TBody>

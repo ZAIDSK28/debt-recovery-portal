@@ -15,6 +15,8 @@ class PrintableInvoiceItemSerializer(serializers.ModelSerializer):
 
 
 class PrintableInvoiceListSerializer(serializers.ModelSerializer):
+    linked_bill_id = serializers.IntegerField(source="linked_bill.id", read_only=True)
+
     class Meta:
         model = PrintableInvoice
         fields = [
@@ -34,6 +36,7 @@ class PrintableInvoiceListSerializer(serializers.ModelSerializer):
 
 class PrintableInvoiceDetailSerializer(serializers.ModelSerializer):
     items = PrintableInvoiceItemSerializer(many=True, read_only=True)
+    linked_bill_id = serializers.IntegerField(source="linked_bill.id", read_only=True)
 
     class Meta:
         model = PrintableInvoice
@@ -115,6 +118,10 @@ class PrintableInvoiceCreateSerializer(serializers.Serializer):
                 if not attrs.get(field):
                     raise serializers.ValidationError({field: f"{field} is required for bill creation."})
 
+            invoice_number = attrs.get("invoice_number")
+            if invoice_number and Bill.objects.filter(invoice_number=invoice_number).exists():
+                raise serializers.ValidationError({"invoice_number": "Invoice number already exists."})
+
         return attrs
 
     def _serialize_items_for_payload(self, items_data):
@@ -135,7 +142,7 @@ class PrintableInvoiceCreateSerializer(serializers.Serializer):
         request = self.context["request"]
         creation_mode = validated_data["creation_mode"]
 
-        linked_bill_id = None
+        linked_bill = None
 
         if creation_mode in [
             PrintableInvoice.CreationMode.BILL_ONLY,
@@ -146,7 +153,7 @@ class PrintableInvoiceCreateSerializer(serializers.Serializer):
                 name=validated_data["outlet_name"],
                 route=route,
             )
-            bill = Bill.objects.create(
+            linked_bill = Bill.objects.create(
                 invoice_number=validated_data["invoice_number"],
                 invoice_date=validated_data["invoice_date"],
                 outlet=outlet,
@@ -154,13 +161,12 @@ class PrintableInvoiceCreateSerializer(serializers.Serializer):
                 actual_amount=validated_data["total_amount"],
                 remaining_amount=validated_data["total_amount"],
             )
-            linked_bill_id = bill.id
 
         payload_items = self._serialize_items_for_payload(items_data)
 
         printable_invoice = PrintableInvoice.objects.create(
             created_by=request.user,
-            linked_bill_id=linked_bill_id,
+            linked_bill=linked_bill,
             payload={"items": payload_items},
             **validated_data,
         )

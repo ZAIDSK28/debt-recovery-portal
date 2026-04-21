@@ -1,3 +1,4 @@
+// src/components/invoices/invoice-form.tsx
 import { memo, useEffect, useMemo } from "react";
 import { useFieldArray, useForm, useWatch, type Control, type UseFormReturn } from "react-hook-form";
 import { z } from "zod";
@@ -298,7 +299,16 @@ export function InvoiceForm({
 
       onCreated?.(created);
     } catch (error) {
-      toast.error(getApiError(error));
+      const message = getApiError(error);
+
+      if (message === "Invoice number already exists.") {
+        form.setError("invoice_number", {
+          type: "server",
+          message,
+        });
+      }
+
+      toast.error(message);
     }
   }
 

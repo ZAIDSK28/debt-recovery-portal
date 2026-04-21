@@ -16,8 +16,6 @@ from reports.serializers import (
 )
 
 
-# ── Shared HTML builder ────────────────────────────────────────────────────────
-
 def build_invoice_html(invoice):
     items_rows = "".join([
         f"""<tr>
@@ -283,11 +281,9 @@ def build_invoice_html(invoice):
 </html>"""
 
 
-# ── Views ──────────────────────────────────────────────────────────────────────
-
 class PrintableInvoiceListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAdmin]
-    queryset = PrintableInvoice.objects.all().prefetch_related("items")
+    queryset = PrintableInvoice.objects.all().select_related("linked_bill").prefetch_related("items")
     ordering_fields = ["created_at", "invoice_date", "invoice_number", "total_amount"]
     search_fields = ["invoice_number", "customer_name", "route_name", "outlet_name", "brand"]
 
@@ -319,12 +315,11 @@ class PrintableInvoiceListCreateView(generics.ListCreateAPIView):
 
 class PrintableInvoiceRetrieveView(generics.RetrieveAPIView):
     permission_classes = [IsAdmin]
-    queryset = PrintableInvoice.objects.all().prefetch_related("items")
+    queryset = PrintableInvoice.objects.all().select_related("linked_bill").prefetch_related("items")
     serializer_class = PrintableInvoiceDetailSerializer
 
 
 class PrintableInvoicePrintView(views.APIView):
-    """Returns the invoice as a rendered HTML page (browser preview)."""
     permission_classes = [IsAdmin]
 
     def get(self, request, pk, *args, **kwargs):
@@ -337,7 +332,6 @@ class PrintableInvoicePrintView(views.APIView):
 
 
 class PrintableInvoicePDFView(views.APIView):
-    """Returns the invoice as a PDF — rendered from the exact same HTML template."""
     permission_classes = [IsAdmin]
 
     def get(self, request, pk, *args, **kwargs):

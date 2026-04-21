@@ -1,6 +1,11 @@
+/* src/index.css */
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 :root {
+  --font-body: "Plus Jakarta Sans", sans-serif;
+  --font-heading: "Manrope", sans-serif;
+
   --sky-50: #f0f9ff;
   --sky-100: #e0f2fe;
   --sky-200: #bae6fd;
@@ -56,7 +61,7 @@
 }
 
 html {
-  font-family: "Inter", sans-serif;
+  font-family: var(--font-body);
   -webkit-text-size-adjust: 100%;
   text-rendering: optimizeLegibility;
 }
@@ -66,8 +71,19 @@ body {
   min-height: 100vh;
   background: var(--gradient-app);
   color: var(--gray-900);
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+[role="heading"] {
+  font-family: var(--font-heading);
 }
 
 button,

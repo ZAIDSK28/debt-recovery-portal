@@ -1,3 +1,4 @@
+// src/hooks/useBills.ts
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   assignBillsApi,
@@ -61,6 +62,8 @@ export function useDeleteBill() {
     mutationFn: (id: number) => deleteBillApi(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["bills"] });
+      void queryClient.invalidateQueries({ queryKey: ["invoice-reports"] });
+      void queryClient.invalidateQueries({ queryKey: ["invoice-report"] });
     },
   });
 }
