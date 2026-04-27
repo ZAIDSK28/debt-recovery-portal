@@ -1,6 +1,9 @@
+# payments/views.py
+
 from __future__ import annotations
 
 import io
+import logging
 from datetime import timedelta
 
 import pandas as pd
@@ -24,6 +27,8 @@ from payments.serializers import (
     TodayTotalsSerializer,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def format_export_datetime(value):
     if value is None:
@@ -39,7 +44,12 @@ class RecordPaymentView(generics.CreateAPIView):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        bill = get_object_or_404(Bill, id=self.kwargs["bill_id"], assigned_to=self.request.user, status=Bill.Status.OPEN)
+        bill = get_object_or_404(
+            Bill.objects.select_related("outlet__route", "assigned_to"),
+            id=self.kwargs["bill_id"],
+            assigned_to=self.request.user,
+            status=Bill.Status.OPEN,
+        )
         context["bill"] = bill
         return context
 
@@ -96,8 +106,8 @@ class PaymentUpdateView(generics.UpdateAPIView):
     queryset = Payment.objects.select_related("bill").all()
 
     def perform_update(self, serializer):
-        original = self.get_object()
-        old_status = original.cheque_status
+        payment_obj = self.get_object()
+        old_status = payment_obj.cheque_status
         payment = serializer.save()
         create_audit_log(
             actor=self.request.user,
@@ -119,7 +129,7 @@ class TodayTotalsView(views.APIView):
     def get(self, request, *args, **kwargs):
         today = timezone.localdate()
         totals = self._compute_totals(today, today)
-        serializer = TodayTotalsSerializer(totals)
+        serializer = TodayTotalsSerializer(instance=totals)
         return Response(serializer.data)
 
     def _compute_totals(self, start_date, end_date):
@@ -194,7 +204,7 @@ class DailySummaryView(views.APIView):
                 summary_map[day]["electronic_total"] = total
 
         data = [summary_map[day] for day in sorted(summary_map.keys())]
-        serializer = DailySummarySerializer(data, many=True)
+        serializer = DailySummarySerializer(instance=data, many=True)
         return Response(serializer.data)
 
 
@@ -204,7 +214,7 @@ class ExportPaymentsView(views.APIView):
     def get(self, request, *args, **kwargs):
         queryset = Payment.objects.select_related("bill").all()
         payment_method = request.query_params.get("payment_method")
-        payment_method_in = request.query_params.get("payment_method_in")
+        payment_method_in = self.request.query_params.get("payment_method_in")
         start_date = request.query_params.get("start_date")
         end_date = request.query_params.get("end_date")
 

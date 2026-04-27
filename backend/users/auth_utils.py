@@ -1,3 +1,5 @@
+# users/auth_utils.py
+
 from __future__ import annotations
 
 import logging
@@ -34,7 +36,11 @@ def create_and_send_admin_otp(user: User) -> AdminOTP:
     subject = "Your Debt Recovery Portal OTP"
     message = f"Your OTP is {otp.code}. It expires in {settings.OTP_EXPIRY_MINUTES} minutes."
     if user.email:
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
+        try:
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
+        except Exception:
+            logger.exception("Failed to send OTP email for admin user_id=%s", user.id)
+            raise
 
     logger.info("OTP generated for admin user_id=%s", user.id)
     return otp

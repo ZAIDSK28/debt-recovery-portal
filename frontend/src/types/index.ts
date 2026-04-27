@@ -29,6 +29,18 @@ export interface Outlet {
   route_name: string;
 }
 
+export interface Product {
+  id: number;
+  product_code: string;
+  category: string;
+  name: string;
+  price: string;
+  default_quantity: string;
+  tax_rate: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface Invoice {
   id: number;
   invoice_number: string;
@@ -126,19 +138,45 @@ export interface ImportBillsStatus {
   percentage: number;
 }
 
+export interface CreateInvoiceReportPayloadItem {
+  product_id: number;
+  quantity: string;
+}
+
 export interface InvoiceReportRequestItem {
+  product_id: number;
+  quantity: string;
+}
+
+export interface InvoiceReportResponseItem {
+  id: number;
+  product_id: number | null;
+  product_code: string | null;
+  product_name: string | null;
+  category: string | null;
   description: string;
   quantity: string;
   rate: string;
+  tax_rate: string;
+  tax_amount: string;
   amount: string;
-}
-
-export interface InvoiceReportResponseItem extends InvoiceReportRequestItem {
-  id: number;
+  line_total: string;
 }
 
 export interface InvoiceReportPayload {
-  items: InvoiceReportRequestItem[];
+  items?: Array<{
+    product_id: number;
+    product_code: string;
+    product_name: string;
+    category: string;
+    description: string;
+    quantity: string;
+    rate: string;
+    tax_rate: string;
+    tax_amount: string;
+    amount: string;
+    line_total: string;
+  }>;
 }
 
 export interface InvoiceReportListItem {
@@ -149,6 +187,9 @@ export interface InvoiceReportListItem {
   route_name: string;
   outlet_name: string;
   brand: string;
+  subtotal: string;
+  tax_amount: string;
+  discount_amount: string;
   total_amount: string;
   creation_mode: InvoiceCreationMode;
   linked_bill_id: number | null;
@@ -183,18 +224,15 @@ export interface CreateInvoiceReportPayload {
   invoice_number: string;
   invoice_date: string;
   customer_name: string;
-  customer_address: string;
-  customer_phone: string;
-  gst_number: string;
-  route_name: string;
-  outlet_name: string;
-  brand: string;
-  subtotal: string;
-  tax_amount: string;
-  discount_amount: string;
-  total_amount: string;
-  notes: string;
-  terms: string;
+  customer_address?: string;
+  customer_phone?: string;
+  gst_number?: string;
+  route_name?: string;
+  outlet_name?: string;
+  brand?: string;
+  discount_amount?: string;
+  notes?: string;
+  terms?: string;
   creation_mode: InvoiceCreationMode;
-  items: InvoiceReportRequestItem[];
+  items: CreateInvoiceReportPayloadItem[];
 }

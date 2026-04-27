@@ -1,11 +1,1 @@
-1 - Bills cleared Not today Not getting updated in the DRA dashboard 
-2 - For Export Date validation is necessary for each export button 
-3- After logging out of one account when we log in with diffrent account , it logs us in as previous user Example : if i logout from admin account and login as DRA it will take me back to admin account without OTP verififcation and new OTP will be sent to my emails account 
-4 - I need to add some validations in the frontend and backend 
-5 - 
-
-------------------------------------------
-5- facing some frontend issues in bill creation , items add 
-
-
-6- need to upgrade the frontend UI , make Input Buttons sleeker 
+1 - Default Quantity is something that's like say parcetamol is product then 

@@ -11,4 +11,6 @@ export const queryKeys = {
   dailySummary: (days: number) => ["daily-summary", days] as const,
   invoiceReports: (params?: unknown) => ["invoice-reports", params] as const,
   invoiceReportDetail: (id: number) => ["invoice-report", id] as const,
+  products: (params?: unknown) => ["products", params] as const,
+  productDetail: (id: number) => ["product", id] as const,
 };

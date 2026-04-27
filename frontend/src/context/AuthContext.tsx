@@ -1,5 +1,3 @@
-// src/context/AuthContext.tsx
-
 import {
   createContext,
   useCallback,
@@ -80,6 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await loginApi(payload);
 
       if (!isLoginSuccessResponse(response)) {
+        clearAuthStorage();
+
         if (typeof window !== "undefined") {
           localStorage.setItem(PENDING_OTP_KEY, payload.username);
         }

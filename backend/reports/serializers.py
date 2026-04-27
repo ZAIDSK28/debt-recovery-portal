@@ -1,17 +1,43 @@
 # reports/serializers.py
 
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from rest_framework import serializers
 
 from bills.models import Bill, Outlet, Route
+from products.models import Product
 from reports.models import PrintableInvoice, PrintableInvoiceItem
 
 
+TWOPLACES = Decimal("0.01")
+
+
+def q(value: Decimal) -> Decimal:
+    return value.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+
+
 class PrintableInvoiceItemSerializer(serializers.ModelSerializer):
+    product_id = serializers.IntegerField(source="product.id", read_only=True)
+    product_code = serializers.CharField(source="product.product_code", read_only=True)
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    category = serializers.CharField(source="product.category", read_only=True)
+
     class Meta:
         model = PrintableInvoiceItem
-        fields = ["id", "description", "quantity", "rate", "amount"]
+        fields = [
+            "id",
+            "product_id",
+            "product_code",
+            "product_name",
+            "category",
+            "description",
+            "quantity",
+            "rate",
+            "tax_rate",
+            "tax_amount",
+            "amount",
+            "line_total",
+        ]
 
 
 class PrintableInvoiceListSerializer(serializers.ModelSerializer):
@@ -27,6 +53,9 @@ class PrintableInvoiceListSerializer(serializers.ModelSerializer):
             "route_name",
             "outlet_name",
             "brand",
+            "subtotal",
+            "tax_amount",
+            "discount_amount",
             "total_amount",
             "creation_mode",
             "linked_bill_id",
@@ -65,6 +94,16 @@ class PrintableInvoiceDetailSerializer(serializers.ModelSerializer):
         ]
 
 
+class PrintableInvoiceCreateItemInputSerializer(serializers.Serializer):
+    product_id = serializers.PrimaryKeyRelatedField(queryset=Product.objects.filter(is_active=True), source="product")
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+    def validate_quantity(self, value):
+        if value <= Decimal("0.00"):
+            raise serializers.ValidationError("Quantity must be greater than zero.")
+        return value
+
+
 class PrintableInvoiceCreateSerializer(serializers.Serializer):
     invoice_number = serializers.CharField(max_length=100)
     invoice_date = serializers.DateField()
@@ -78,11 +117,7 @@ class PrintableInvoiceCreateSerializer(serializers.Serializer):
     outlet_name = serializers.CharField(required=False, allow_blank=True)
     brand = serializers.CharField(required=False, allow_blank=True)
 
-    subtotal = serializers.DecimalField(max_digits=12, decimal_places=2)
-    tax_amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, default=Decimal("0.00"))
     discount_amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, default=Decimal("0.00"))
-    total_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
-
     notes = serializers.CharField(required=False, allow_blank=True)
     terms = serializers.CharField(required=False, allow_blank=True)
 
@@ -90,25 +125,19 @@ class PrintableInvoiceCreateSerializer(serializers.Serializer):
         choices=PrintableInvoice.CreationMode.choices
     )
 
-    items = PrintableInvoiceItemSerializer(many=True, required=False)
+    items = PrintableInvoiceCreateItemInputSerializer(many=True)
 
     def validate_invoice_number(self, value):
         if PrintableInvoice.objects.filter(invoice_number=value).exists():
             raise serializers.ValidationError("Invoice number already exists.")
         return value
 
+    def validate_discount_amount(self, value):
+        if value < Decimal("0.00"):
+            raise serializers.ValidationError("Discount amount cannot be negative.")
+        return value
+
     def validate(self, attrs):
-        subtotal = attrs.get("subtotal", Decimal("0.00"))
-        tax_amount = attrs.get("tax_amount", Decimal("0.00"))
-        discount_amount = attrs.get("discount_amount", Decimal("0.00"))
-        total_amount = attrs.get("total_amount", Decimal("0.00"))
-
-        expected_total = subtotal + tax_amount - discount_amount
-        if total_amount != expected_total:
-            raise serializers.ValidationError(
-                {"total_amount": "Total amount must equal subtotal + tax_amount - discount_amount."}
-            )
-
         if attrs["creation_mode"] in [
             PrintableInvoice.CreationMode.BILL_ONLY,
             PrintableInvoice.CreationMode.PRINTABLE_AND_BILL,
@@ -122,25 +151,65 @@ class PrintableInvoiceCreateSerializer(serializers.Serializer):
             if invoice_number and Bill.objects.filter(invoice_number=invoice_number).exists():
                 raise serializers.ValidationError({"invoice_number": "Invoice number already exists."})
 
-        return attrs
+        items = attrs.get("items") or []
+        if not items:
+            raise serializers.ValidationError({"items": "At least one product is required."})
 
-    def _serialize_items_for_payload(self, items_data):
-        serialized_items = []
-        for item in items_data:
-            serialized_items.append(
+        subtotal = Decimal("0.00")
+        total_tax = Decimal("0.00")
+
+        computed_items = []
+        for item in items:
+            product = item["product"]
+            quantity = item["quantity"]
+
+            amount = q(product.price * quantity)
+            item_tax = q((amount * product.tax_rate) / Decimal("100.00"))
+            line_total = q(amount + item_tax)
+
+            subtotal += amount
+            total_tax += item_tax
+
+            computed_items.append(
                 {
-                    "description": item.get("description", ""),
-                    "quantity": str(item.get("quantity", Decimal("0.00"))),
-                    "rate": str(item.get("rate", Decimal("0.00"))),
-                    "amount": str(item.get("amount", Decimal("0.00"))),
+                    "product": product,
+                    "description": product.name,
+                    "quantity": quantity,
+                    "rate": q(product.price),
+                    "tax_rate": q(product.tax_rate),
+                    "tax_amount": item_tax,
+                    "amount": amount,
+                    "line_total": line_total,
                 }
             )
-        return serialized_items
+
+        subtotal = q(subtotal)
+        total_tax = q(total_tax)
+        discount_amount = q(attrs.get("discount_amount", Decimal("0.00")))
+        total_amount = q(subtotal + total_tax - discount_amount)
+
+        if total_amount < Decimal("0.00"):
+            raise serializers.ValidationError({"discount_amount": "Discount amount cannot exceed invoice total."})
+
+        attrs["_computed_items"] = computed_items
+        attrs["_subtotal"] = subtotal
+        attrs["_tax_amount"] = total_tax
+        attrs["_total_amount"] = total_amount
+        attrs["_discount_amount"] = discount_amount
+        return attrs
 
     def create(self, validated_data):
-        items_data = validated_data.pop("items", [])
         request = self.context["request"]
         creation_mode = validated_data["creation_mode"]
+
+        computed_items = validated_data.pop("_computed_items")
+        subtotal = validated_data.pop("_subtotal")
+        tax_amount = validated_data.pop("_tax_amount")
+        total_amount = validated_data.pop("_total_amount")
+        discount_amount = validated_data.pop("_discount_amount")
+
+        validated_data.pop("items", None)
+        validated_data.pop("discount_amount", None)
 
         linked_bill = None
 
@@ -158,20 +227,39 @@ class PrintableInvoiceCreateSerializer(serializers.Serializer):
                 invoice_date=validated_data["invoice_date"],
                 outlet=outlet,
                 brand=validated_data["brand"],
-                actual_amount=validated_data["total_amount"],
-                remaining_amount=validated_data["total_amount"],
+                actual_amount=total_amount,
+                remaining_amount=total_amount,
             )
 
-        payload_items = self._serialize_items_for_payload(items_data)
+        payload_items = [
+            {
+                "product_id": item["product"].id,
+                "product_code": item["product"].product_code,
+                "product_name": item["product"].name,
+                "category": item["product"].category,
+                "description": item["description"],
+                "quantity": str(item["quantity"]),
+                "rate": str(item["rate"]),
+                "tax_rate": str(item["tax_rate"]),
+                "tax_amount": str(item["tax_amount"]),
+                "amount": str(item["amount"]),
+                "line_total": str(item["line_total"]),
+            }
+            for item in computed_items
+        ]
 
         printable_invoice = PrintableInvoice.objects.create(
             created_by=request.user,
             linked_bill=linked_bill,
             payload={"items": payload_items},
+            subtotal=subtotal,
+            tax_amount=tax_amount,
+            discount_amount=discount_amount,
+            total_amount=total_amount,
             **validated_data,
         )
 
-        for item in items_data:
+        for item in computed_items:
             PrintableInvoiceItem.objects.create(invoice=printable_invoice, **item)
 
         return printable_invoice

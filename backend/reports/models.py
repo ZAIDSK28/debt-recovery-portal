@@ -5,10 +5,6 @@ from django.db import models
 
 
 class PrintableInvoice(models.Model):
-    class InvoiceKind(models.TextChoices):
-        STANDARD = "standard", "Standard"
-        PRINTABLE = "printable", "Printable"
-
     class CreationMode(models.TextChoices):
         BILL_ONLY = "bill_only", "Bill Only"
         PRINTABLE_ONLY = "printable_only", "Printable Only"
@@ -63,10 +59,14 @@ class PrintableInvoice(models.Model):
 
 class PrintableInvoiceItem(models.Model):
     invoice = models.ForeignKey(PrintableInvoice, on_delete=models.CASCADE, related_name="items")
+    product = models.ForeignKey("products.Product", null=True, blank=True, on_delete=models.SET_NULL, related_name="invoice_items")
     description = models.CharField(max_length=255)
     quantity = models.DecimalField(max_digits=12, decimal_places=2, default=1)
     rate = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    tax_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    line_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     class Meta:
         ordering = ["id"]

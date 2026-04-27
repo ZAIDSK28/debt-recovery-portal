@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUpdatePaymentStatus } from "@/hooks/usePayments";
@@ -12,21 +13,31 @@ export function ChequeStatusSelect({
   value: ChequeStatus;
 }) {
   const mutation = useUpdatePaymentStatus();
+  const [localValue, setLocalValue] = useState<ChequeStatus>(value);
+
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
 
   async function handleChange(nextValue: string) {
+    const previousValue = localValue;
+    const nextStatus = nextValue as ChequeStatus;
+    setLocalValue(nextStatus);
+
     try {
       await mutation.mutateAsync({
         id: paymentId,
-        cheque_status: nextValue as ChequeStatus,
+        cheque_status: nextStatus,
       });
       toast.success("Status updated");
     } catch (error) {
+      setLocalValue(previousValue);
       toast.error(getApiError(error));
     }
   }
 
   return (
-    <Select value={value} onValueChange={handleChange}>
+    <Select value={localValue} onValueChange={handleChange}>
       <SelectTrigger className="w-[138px]">
         <SelectValue />
       </SelectTrigger>

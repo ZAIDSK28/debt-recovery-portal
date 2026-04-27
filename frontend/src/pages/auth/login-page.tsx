@@ -50,7 +50,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,rgba(186,230,253,0.95),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#f0f9ff_100%)] px-4 py-10">
-      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_20%_20%,rgba(125,211,252,0.2),transparent_20%),radial-gradient(circle_at_80%_10%,rgba(56,189,248,0.12),transparent_24%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(125,211,252,0.2),transparent_20%),radial-gradient(circle_at_80%_10%,rgba(56,189,248,0.12),transparent_24%)]" />
 
       <Card className="relative w-full max-w-md border-white/70 shadow-[0_20px_50px_rgba(14,165,233,0.14)]">
         <CardHeader className="items-center text-center">
@@ -85,6 +85,7 @@ export default function LoginPage() {
                   type="button"
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
                   onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>

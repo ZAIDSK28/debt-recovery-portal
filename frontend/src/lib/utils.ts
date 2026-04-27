@@ -1,5 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]): string {
@@ -17,7 +17,11 @@ export function formatCurrency(value: string | number): string {
 
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
-  return format(new Date(iso), "dd MMM yyyy");
+
+  const parsed = new Date(iso);
+  if (!isValid(parsed)) return "—";
+
+  return format(parsed, "dd MMM yyyy");
 }
 
 export function overdueSeverity(days: number): "low" | "medium" | "high" {
@@ -36,18 +40,26 @@ export function getApiError(error: unknown): string {
     const response = (error as { response?: { data?: unknown } }).response;
     const data = response?.data;
 
-    if (typeof data === "string") return data;
+    if (typeof data === "string" && data.trim()) return data;
 
     if (typeof data === "object" && data !== null) {
-      if ("detail" in data && typeof data.detail === "string") {
+      if ("detail" in data && typeof data.detail === "string" && data.detail.trim()) {
         return data.detail;
       }
 
       const values = Object.values(data);
-      const first = values[0];
-      if (typeof first === "string") return first;
-      if (Array.isArray(first) && typeof first[0] === "string") return first[0];
+      for (const value of values) {
+        if (typeof value === "string" && value.trim()) return value;
+        if (Array.isArray(value)) {
+          const firstString = value.find((item) => typeof item === "string" && item.trim());
+          if (typeof firstString === "string") return firstString;
+        }
+      }
     }
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
   }
 
   return "Something went wrong. Please try again.";
@@ -62,4 +74,20 @@ export function downloadBlob(blob: Blob, fileName: string): void {
   anchor.click();
   anchor.remove();
   window.URL.revokeObjectURL(url);
+}
+
+export function fallbackBillsExportFileName(params?: {
+  start_date?: string;
+  end_date?: string;
+}): string {
+  if (params?.start_date && params?.end_date) {
+    return `bills_${params.start_date}_to_${params.end_date}.xlsx`;
+  }
+  if (params?.start_date) {
+    return `bills_from_${params.start_date}.xlsx`;
+  }
+  if (params?.end_date) {
+    return `bills_until_${params.end_date}.xlsx`;
+  }
+  return "bills_export.xlsx";
 }

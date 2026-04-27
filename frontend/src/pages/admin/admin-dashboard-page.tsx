@@ -8,7 +8,7 @@ import { SearchInput } from "@/components/common/search-input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { DailyCollectionsChart } from "@/components/charts/daily-collections-chart";
 import { BillsTable } from "@/components/bills/bills-table";
 import { BillFormModal } from "@/components/bills/bill-form-modal";
@@ -18,8 +18,8 @@ import { useBills } from "@/hooks/useBills";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useDailySummary, useTodayTotals } from "@/hooks/useReports";
 import { useUsers } from "@/hooks/useUsers";
-import { exportBillsApi } from "@/api/bills.api";
-import { downloadBlob, formatCurrency, getApiError } from "@/lib/utils";
+import { exportBillsWithMetaApi } from "@/api/bills.api";
+import { downloadBlob, fallbackBillsExportFileName, formatCurrency, getApiError } from "@/lib/utils";
 import type { Invoice } from "@/types";
 import { ResponsiveTableSkeleton } from "@/components/common/loading-state";
 
@@ -58,6 +58,31 @@ export default function AdminDashboardPage() {
   const totalInvoices = billsQuery.data?.count ?? 0;
   const users = usersQuery.data ?? [];
 
+  async function handleExportBills() {
+    if (billExportStartDate && billExportEndDate && billExportStartDate > billExportEndDate) {
+      toast.error("Start date cannot be after end date.");
+      return;
+    }
+
+    if ((billsQuery.data?.count ?? 0) === 0) {
+      toast.error("No invoice records available to export.");
+      return;
+    }
+
+    try {
+      const params = {
+        start_date: billExportStartDate || undefined,
+        end_date: billExportEndDate || undefined,
+      };
+
+      const { blob, filename } = await exportBillsWithMetaApi(params);
+      downloadBlob(blob, filename || fallbackBillsExportFileName(params));
+      toast.success("Bills export started");
+    } catch (error) {
+      toast.error(getApiError(error));
+    }
+  }
+
   const actions = useMemo(
     () => (
       <>
@@ -75,43 +100,18 @@ export default function AdminDashboardPage() {
           <FileSpreadsheet className="mr-2 h-4 w-4" />
           Import Bills
         </Button>
-        <Button
-          className="w-full sm:w-auto"
-          variant="outline"
-          onClick={async () => {
-            if (billExportStartDate && billExportEndDate && billExportStartDate > billExportEndDate) {
-              toast.error("Start date cannot be after end date.");
-              return;
-            }
-
-            if ((billsQuery.data?.count ?? 0) === 0) {
-              toast.error("No invoice records available to export.");
-              return;
-            }
-
-            try {
-              const blob = await exportBillsApi({
-                start_date: billExportStartDate || undefined,
-                end_date: billExportEndDate || undefined,
-              });
-              downloadBlob(blob, "bills_export.xlsx");
-              toast.success("Bills export started");
-            } catch (error) {
-              toast.error(getApiError(error));
-            }
-          }}
-        >
+        <Button className="w-full sm:w-auto" variant="outline" onClick={() => void handleExportBills()}>
           <Download className="mr-2 h-4 w-4" />
           Export Bills
         </Button>
       </>
     ),
-    [billExportStartDate, billExportEndDate, billsQuery.data?.count]
+    [billExportEndDate, billExportStartDate, billsQuery.data?.count]
   );
 
   return (
     <AppShell title="Admin Dashboard">
-      <div className="space-y-6">
+      <div className="w-full max-w-none space-y-6">
         <PageHeader
           title="Collections Overview"
           description="Track field collections, monitor ageing, and manage invoice assignments."
@@ -151,7 +151,7 @@ export default function AdminDashboardPage() {
           <DailyCollectionsChart data={dailySummaryQuery.data ?? []} />
         )}
 
-        <div className="space-y-4 rounded-[18px] border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="w-full space-y-4 rounded-[18px] border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="w-full max-w-sm">
               <SearchInput
@@ -178,11 +178,21 @@ export default function AdminDashboardPage() {
           <div className={`grid grid-cols-1 gap-4 lg:grid-cols-3 ${showMobileFilters ? "block" : "hidden md:grid"}`}>
             <div>
               <label className="mb-2 block text-sm font-medium text-slate-700">Export Start Date</label>
-              <Input type="date" value={billExportStartDate} onChange={(e) => setBillExportStartDate(e.target.value)} />
+              <DateInput
+                value={billExportStartDate}
+                onChange={setBillExportStartDate}
+                clearable
+                max={billExportEndDate || undefined}
+              />
             </div>
             <div>
               <label className="mb-2 block text-sm font-medium text-slate-700">Export End Date</label>
-              <Input type="date" value={billExportEndDate} onChange={(e) => setBillExportEndDate(e.target.value)} />
+              <DateInput
+                value={billExportEndDate}
+                onChange={setBillExportEndDate}
+                clearable
+                min={billExportStartDate || undefined}
+              />
             </div>
             <div className="flex items-end">
               <Button
@@ -199,7 +209,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-                {billsQuery.isLoading ? (
+        {billsQuery.isLoading ? (
           <ResponsiveTableSkeleton />
         ) : invoices.length === 0 ? (
           <EmptyState
@@ -208,19 +218,21 @@ export default function AdminDashboardPage() {
             description="Create a new invoice or adjust your search to view records."
           />
         ) : (
-          <BillsTable
-            data={invoices}
-            total={totalInvoices}
-            page={page}
-            pageSize={pageSize}
-            users={users}
-            onPageChange={setPage}
-            onEdit={(bill) => {
-              setEditingBill(bill);
-              setIsBillModalOpen(true);
-            }}
-            onDelete={(bill) => setDeleteBillId(bill.id)}
-          />
+          <div className="w-full">
+            <BillsTable
+              data={invoices}
+              total={totalInvoices}
+              page={page}
+              pageSize={pageSize}
+              users={users}
+              onPageChange={setPage}
+              onEdit={(bill) => {
+                setEditingBill(bill);
+                setIsBillModalOpen(true);
+              }}
+              onDelete={(bill) => setDeleteBillId(bill.id)}
+            />
+          </div>
         )}
       </div>
 

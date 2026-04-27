@@ -42,6 +42,13 @@ function processQueue(token: string | null): void {
   pendingQueue = [];
 }
 
+function redirectToLogin(): void {
+  if (typeof window === "undefined") return;
+  if (window.location.pathname !== "/login") {
+    window.location.href = "/login";
+  }
+}
+
 export const axiosInstance = axios.create({
   baseURL: API_URL,
 });
@@ -61,8 +68,15 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+    const requestUrl = originalRequest?.url ?? "";
 
     if (error.response?.status !== 401 || !originalRequest || originalRequest._retry) {
+      return Promise.reject(error);
+    }
+
+    if (requestUrl.includes("/auth/token/refresh/")) {
+      clearAuthStorage();
+      redirectToLogin();
       return Promise.reject(error);
     }
 
@@ -70,7 +84,7 @@ axiosInstance.interceptors.response.use(
 
     if (!refreshToken) {
       clearAuthStorage();
-      window.location.href = "/login";
+      redirectToLogin();
       return Promise.reject(error);
     }
 
@@ -108,7 +122,7 @@ axiosInstance.interceptors.response.use(
     } catch (refreshError) {
       processQueue(null);
       clearAuthStorage();
-      window.location.href = "/login";
+      redirectToLogin();
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;

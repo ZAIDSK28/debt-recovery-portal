@@ -20,8 +20,8 @@ export function SelectTrigger({
         className
       )}
     >
-      {children}
-      <SelectPrimitive.Icon>
+      <span className="min-w-0 flex-1 truncate">{children}</span>
+      <SelectPrimitive.Icon className="ml-2 shrink-0">
         <ChevronDown className="h-4 w-4 text-slate-500" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
@@ -31,7 +31,12 @@ export function SelectTrigger({
 export function SelectContent({ children }: { children: ReactNode }) {
   return (
     <SelectPrimitive.Portal>
-      <SelectPrimitive.Content className="z-50 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_32px_rgba(15,23,42,0.12)]">
+      <SelectPrimitive.Content
+        position="popper"
+        sideOffset={8}
+        collisionPadding={8}
+        className="z-50 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_32px_rgba(15,23,42,0.12)]"
+      >
         <SelectPrimitive.Viewport className="p-1">{children}</SelectPrimitive.Viewport>
       </SelectPrimitive.Content>
     </SelectPrimitive.Portal>

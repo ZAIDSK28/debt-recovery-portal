@@ -83,7 +83,13 @@ export default function DRADashboardPage() {
             }}
           />
 
-          <Select value={mode} onValueChange={(value) => setMode(value as typeof mode)}>
+          <Select
+            value={mode}
+            onValueChange={(value) => {
+              setPage(1);
+              setMode(value as typeof mode);
+            }}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Search mode" />
             </SelectTrigger>

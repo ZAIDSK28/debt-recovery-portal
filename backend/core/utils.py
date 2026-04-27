@@ -1,5 +1,8 @@
+# core/utils.py
+
 from __future__ import annotations
 
+import uuid
 from datetime import date
 from typing import Any
 
@@ -19,3 +22,19 @@ def create_audit_log(*, actor, action: str, entity_type: str, entity_id: str, me
         entity_id=entity_id,
         metadata=metadata or {},
     )
+
+
+def build_request_log_context(request) -> dict[str, Any]:
+    request_id = None
+    if request is not None:
+        request_id = request.headers.get("X-Request-ID") or request.META.get("HTTP_X_REQUEST_ID")
+
+    if not request_id:
+        request_id = str(uuid.uuid4())
+
+    return {
+        "request_id": request_id,
+        "path": getattr(request, "path", None),
+        "method": getattr(request, "method", None),
+        "user_id": getattr(getattr(request, "user", None), "id", None),
+    }

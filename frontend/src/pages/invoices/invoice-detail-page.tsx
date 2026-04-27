@@ -1,4 +1,3 @@
-// src/pages/invoices/invoice-detail-page.tsx
 import { ArrowLeft, Download, Printer } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -163,22 +162,34 @@ export default function InvoiceDetailPage() {
               </CardHeader>
               <CardContent className="px-0 pb-5 pt-0">
                 <TableWrapper className="w-full rounded-none border-0 shadow-none">
-                  <Table className="min-w-full table-fixed">
+                  <Table className="min-w-full table-auto">
                     <THead>
                       <tr>
-                        <TH className="w-[46%]">Description</TH>
-                        <TH className="w-[18%]">Quantity</TH>
-                        <TH className="w-[18%]">Rate</TH>
-                        <TH className="w-[18%]">Amount</TH>
+                        <TH>Product Code</TH>
+                        <TH>Product Name</TH>
+                        <TH>Category</TH>
+                        <TH>Description</TH>
+                        <TH>Quantity</TH>
+                        <TH>Rate</TH>
+                        <TH>Tax Rate</TH>
+                        <TH>Tax Amount</TH>
+                        <TH>Amount</TH>
+                        <TH>Line Total</TH>
                       </tr>
                     </THead>
                     <TBody>
                       {invoice.items.map((item) => (
                         <tr key={item.id} className="border-t border-slate-100 align-top">
-                          <TD className="whitespace-normal break-words">{item.description}</TD>
+                          <TD>{item.product_code || "—"}</TD>
+                          <TD>{item.product_name || "—"}</TD>
+                          <TD>{item.category || "—"}</TD>
+                          <TD className="whitespace-normal break-words">{item.description || "—"}</TD>
                           <TD>{item.quantity}</TD>
                           <TD>{formatCurrency(item.rate)}</TD>
-                          <TD className="font-medium">{formatCurrency(item.amount)}</TD>
+                          <TD>{item.tax_rate}%</TD>
+                          <TD>{formatCurrency(item.tax_amount)}</TD>
+                          <TD>{formatCurrency(item.amount)}</TD>
+                          <TD className="font-medium">{formatCurrency(item.line_total)}</TD>
                         </tr>
                       ))}
                     </TBody>

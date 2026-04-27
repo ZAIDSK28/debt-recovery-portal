@@ -16,6 +16,7 @@ urlpatterns = [
     path("api/bills/", include("bills.urls")),
     path("api/payments/", include("payments.urls")),
     path("api/reports/", include("reports.urls")),
+    path("api/products/", include("products.urls")),
     path("api/routes/", RouteListView.as_view(), name="routes-list-root"),
     path("api/outlets/", OutletListView.as_view(), name="outlets-list-root"),
     path("api/my-assignments-flat/", MyAssignmentsFlatView.as_view(), name="my-assignments-flat-root"),

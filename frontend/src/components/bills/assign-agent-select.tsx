@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAssignBill } from "@/hooks/useBills";
@@ -16,6 +16,10 @@ export function AssignAgentSelect({
 }) {
   const [value, setValue] = useState<string>(currentAssignedToId ? String(currentAssignedToId) : "unassigned");
   const assignMutation = useAssignBill();
+
+  useEffect(() => {
+    setValue(currentAssignedToId ? String(currentAssignedToId) : "unassigned");
+  }, [currentAssignedToId]);
 
   async function handleChange(nextValue: string) {
     const previous = value;

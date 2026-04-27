@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DateInput } from "@/components/ui/date-input";
 import { useRecordPayment } from "@/hooks/usePayments";
 import { formatCurrency, getApiError } from "@/lib/utils";
 import type { Invoice } from "@/types";
@@ -33,7 +34,7 @@ const paymentSchema = z
   .superRefine((values, ctx) => {
     const method = values.payment_method;
 
-    if (method === "upi" && !values.transaction_number) {
+    if (method === "upi" && !values.transaction_number?.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Transaction number is required",
@@ -42,14 +43,14 @@ const paymentSchema = z
     }
 
     if (method === "cheque" || method === "electronic") {
-      if (!values.cheque_number) {
+      if (!values.cheque_number?.trim()) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Cheque number is required",
           path: ["cheque_number"],
         });
       }
-      if (!values.cheque_date) {
+      if (!values.cheque_date?.trim()) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Cheque date is required",
@@ -72,7 +73,7 @@ const paymentSchema = z
       }
     }
 
-    if (method === "electronic" && !values.transaction_number) {
+    if (method === "electronic" && !values.transaction_number?.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Transaction number is required",
@@ -113,6 +114,7 @@ export function PaymentFormModal({
   const method = useWatch({ control: form.control, name: "payment_method" });
   const chequeType = useWatch({ control: form.control, name: "cheque_type" });
   const firm = useWatch({ control: form.control, name: "firm" });
+  const chequeDate = useWatch({ control: form.control, name: "cheque_date" });
 
   useEffect(() => {
     if (open) {
@@ -135,7 +137,7 @@ export function PaymentFormModal({
     if (!bill) return;
 
     const numericAmount = Number(values.amount);
-    if (numericAmount <= 0) {
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
       toast.error("Amount must be greater than zero.");
       return;
     }
@@ -151,9 +153,9 @@ export function PaymentFormModal({
         payload: {
           amount: values.amount,
           payment_method: values.payment_method,
-          transaction_number: values.transaction_number || undefined,
-          cheque_number: values.cheque_number || undefined,
-          cheque_date: values.cheque_date || undefined,
+          transaction_number: values.transaction_number?.trim() || undefined,
+          cheque_number: values.cheque_number?.trim() || undefined,
+          cheque_date: values.cheque_date?.trim() || undefined,
           cheque_type: values.cheque_type,
           cheque_status: values.cheque_status,
           firm: values.firm,
@@ -208,6 +210,8 @@ export function PaymentFormModal({
                 value={method}
                 onValueChange={(value) =>
                   form.setValue("payment_method", value as PaymentFormValues["payment_method"], {
+                    shouldDirty: true,
+                    shouldTouch: true,
                     shouldValidate: true,
                   })
                 }
@@ -246,7 +250,17 @@ export function PaymentFormModal({
 
                 <div className="space-y-2">
                   <Label htmlFor="cheque_date">Cheque Date</Label>
-                  <Input id="cheque_date" type="date" {...form.register("cheque_date")} />
+                  <DateInput
+                    value={chequeDate ?? ""}
+                    onChange={(value) =>
+                      form.setValue("cheque_date", value, {
+                        shouldDirty: true,
+                        shouldTouch: true,
+                        shouldValidate: true,
+                      })
+                    }
+                    clearable
+                  />
                   {form.formState.errors.cheque_date ? (
                     <p className="text-sm text-red-500">{form.formState.errors.cheque_date.message}</p>
                   ) : null}
@@ -257,7 +271,11 @@ export function PaymentFormModal({
                   <Select
                     value={chequeType}
                     onValueChange={(value) =>
-                      form.setValue("cheque_type", value as "rtgs" | "neft" | "imps", { shouldValidate: true })
+                      form.setValue("cheque_type", value as "rtgs" | "neft" | "imps", {
+                        shouldDirty: true,
+                        shouldTouch: true,
+                        shouldValidate: true,
+                      })
                     }
                   >
                     <SelectTrigger>
@@ -279,7 +297,11 @@ export function PaymentFormModal({
                   <Select
                     value={firm}
                     onValueChange={(value) =>
-                      form.setValue("firm", value as "NA" | "MZ", { shouldValidate: true })
+                      form.setValue("firm", value as "NA" | "MZ", {
+                        shouldDirty: true,
+                        shouldTouch: true,
+                        shouldValidate: true,
+                      })
                     }
                   >
                     <SelectTrigger>
@@ -300,7 +322,7 @@ export function PaymentFormModal({
         </DialogBody>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button form="payment-form" type="submit" disabled={mutation.isPending}>

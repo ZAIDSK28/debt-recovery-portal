@@ -79,3 +79,25 @@ export async function exportPaymentsApi(params?: {
   });
   return data as Blob;
 }
+
+export async function exportPaymentsWithMetaApi(params?: {
+  payment_method?: PaymentMethod;
+  payment_method_in?: string;
+  start_date?: string;
+  end_date?: string;
+}): Promise<{ blob: Blob; filename?: string }> {
+  const response = await axiosInstance.get("/payments/export/", {
+    params,
+    responseType: "blob",
+  });
+
+  const disposition = response.headers["content-disposition"] as string | undefined;
+  const filename = disposition
+    ? /filename\*?=(?:UTF-8''|")?([^";]+)"?/i.exec(disposition)?.[1]
+    : undefined;
+
+  return {
+    blob: response.data as Blob,
+    filename: filename ? decodeURIComponent(filename) : undefined,
+  };
+}

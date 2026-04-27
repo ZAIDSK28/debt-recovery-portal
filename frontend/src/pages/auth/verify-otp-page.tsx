@@ -17,7 +17,11 @@ export default function VerifyOtpPage() {
 
   useEffect(() => {
     if (cooldown <= 0) return;
-    const id = window.setInterval(() => setCooldown((prev) => prev - 1), 1000);
+
+    const id = window.setInterval(() => {
+      setCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+
     return () => window.clearInterval(id);
   }, [cooldown]);
 
@@ -42,6 +46,22 @@ export default function VerifyOtpPage() {
     if (event.key === "Backspace" && !digits[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
+  }
+
+  function handlePaste(event: React.ClipboardEvent<HTMLDivElement>) {
+    const pasted = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!pasted) return;
+
+    event.preventDefault();
+
+    const next = ["", "", "", "", "", ""];
+    pasted.split("").forEach((char, index) => {
+      next[index] = char;
+    });
+
+    setDigits(next);
+    const focusIndex = Math.min(pasted.length, 5);
+    inputRefs.current[focusIndex]?.focus();
   }
 
   async function handleVerify() {
@@ -77,6 +97,8 @@ export default function VerifyOtpPage() {
     try {
       await resendOtp();
       setCooldown(60);
+      setDigits(["", "", "", "", "", ""]);
+      inputRefs.current[0]?.focus();
       toast.success("OTP resent");
     } catch (error) {
       toast.error(getApiError(error));
@@ -94,7 +116,7 @@ export default function VerifyOtpPage() {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          <div className="flex justify-center gap-2">
+          <div className="flex justify-center gap-2" onPaste={handlePaste}>
             {digits.map((digit, index) => (
               <input
                 key={index}
@@ -105,8 +127,10 @@ export default function VerifyOtpPage() {
                 onChange={(event) => updateDigit(index, event.target.value)}
                 onKeyDown={(event) => handleKeyDown(index, event)}
                 inputMode="numeric"
+                autoComplete={index === 0 ? "one-time-code" : undefined}
                 maxLength={1}
                 className="h-14 w-12 rounded-xl border border-slate-200 bg-white text-center text-xl font-bold text-slate-900 outline-none ring-0 focus:border-sky-300 focus:ring-2 focus:ring-sky-200"
+                aria-label={`OTP digit ${index + 1}`}
               />
             ))}
           </div>

@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DateInput } from "@/components/ui/date-input";
 import { useCreateBill, useUpdateBill } from "@/hooks/useBills";
 import { useOutlets, useRoutes } from "@/hooks/useRoutes";
 import { useUsers } from "@/hooks/useUsers";
@@ -62,7 +63,9 @@ export function BillFormModal({
   });
 
   const watchedRouteId = useWatch({ control: form.control, name: "route_id" });
+  const watchedOutlet = useWatch({ control: form.control, name: "outlet" });
   const assignedTo = useWatch({ control: form.control, name: "assigned_to" });
+  const invoiceDate = useWatch({ control: form.control, name: "invoice_date" });
 
   const effectiveRouteId = watchedRouteId
     ? Number(watchedRouteId)
@@ -160,7 +163,11 @@ export function BillFormModal({
 
             <div className="space-y-2">
               <Label htmlFor="invoice_date">Invoice Date</Label>
-              <Input id="invoice_date" type="date" {...form.register("invoice_date")} />
+              <DateInput
+                value={invoiceDate ?? ""}
+                onChange={(value) => form.setValue("invoice_date", value, { shouldValidate: true })}
+                clearable
+              />
               {form.formState.errors.invoice_date ? (
                 <p className="text-sm text-red-500">{form.formState.errors.invoice_date.message}</p>
               ) : null}
@@ -190,7 +197,7 @@ export function BillFormModal({
               <Label>Outlet</Label>
               <Combobox
                 options={outletOptions}
-                value={form.getValues("outlet")}
+                value={watchedOutlet}
                 placeholder={effectiveRouteId ? "Select outlet" : "Choose route first"}
                 searchPlaceholder="Search outlets..."
                 disabled={!effectiveRouteId}
@@ -221,7 +228,7 @@ export function BillFormModal({
               <Label>Assign to Agent</Label>
               <Select
                 value={assignedTo ?? "unassigned"}
-                onValueChange={(value) => form.setValue("assigned_to", value)}
+                onValueChange={(value) => form.setValue("assigned_to", value, { shouldValidate: true })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Optional assignment" />
@@ -240,7 +247,7 @@ export function BillFormModal({
         </DialogBody>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button form="bill-form" type="submit" disabled={isSubmitting}>

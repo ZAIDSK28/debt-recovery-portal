@@ -120,7 +120,7 @@ export default function InvoicesListPage() {
         ) : (
           <div className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-sm">
             <TableWrapper className="w-full rounded-none border-0 shadow-none">
-              <Table className="min-w-[1320px] w-full table-auto">
+              <Table className="min-w-[1440px] w-full table-auto">
                 <THead>
                   <tr>
                     <TH>Invoice Number</TH>
@@ -129,6 +129,9 @@ export default function InvoicesListPage() {
                     <TH>Route Name</TH>
                     <TH>Outlet Name</TH>
                     <TH>Brand</TH>
+                    <TH>Subtotal</TH>
+                    <TH>Tax Amount</TH>
+                    <TH>Discount</TH>
                     <TH>Total Amount</TH>
                     <TH>Creation Mode</TH>
                     <TH>Linked Bill</TH>
@@ -147,6 +150,9 @@ export default function InvoicesListPage() {
                       <TD className="whitespace-normal break-words">{invoice.route_name || "—"}</TD>
                       <TD className="whitespace-normal break-words">{invoice.outlet_name || "—"}</TD>
                       <TD className="whitespace-normal break-words">{invoice.brand || "—"}</TD>
+                      <TD>{formatCurrency(invoice.subtotal)}</TD>
+                      <TD>{formatCurrency(invoice.tax_amount)}</TD>
+                      <TD>{formatCurrency(invoice.discount_amount)}</TD>
                       <TD>{formatCurrency(invoice.total_amount)}</TD>
                       <TD className="whitespace-normal capitalize">{invoice.creation_mode.replaceAll("_", " ")}</TD>
                       <TD>{invoice.linked_bill_id ? `#${invoice.linked_bill_id}` : "—"}</TD>

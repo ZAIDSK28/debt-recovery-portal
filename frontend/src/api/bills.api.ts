@@ -1,5 +1,3 @@
-// src/api/bills.api.ts
-
 import { axiosInstance } from "@/api/axiosInstance";
 import type {
   ImportBillsResult,
@@ -66,6 +64,26 @@ export async function exportBillsApi(params?: { start_date?: string; end_date?: 
   return data as Blob;
 }
 
+export async function exportBillsWithMetaApi(params?: {
+  start_date?: string;
+  end_date?: string;
+}): Promise<{ blob: Blob; filename?: string }> {
+  const response = await axiosInstance.get("/bills/export/", {
+    params,
+    responseType: "blob",
+  });
+
+  const disposition = response.headers["content-disposition"] as string | undefined;
+  const filename = disposition
+    ? /filename\*?=(?:UTF-8''|")?([^";]+)"?/i.exec(disposition)?.[1]
+    : undefined;
+
+  return {
+    blob: response.data as Blob,
+    filename: filename ? decodeURIComponent(filename) : undefined,
+  };
+}
+
 export async function importBillsApi(file: File): Promise<ImportBillsResult> {
   const formData = new FormData();
   formData.append("file", file);
@@ -99,4 +117,4 @@ export async function getMyAssignmentsApi(
     { params }
   );
   return data;
-}
+} 

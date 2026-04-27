@@ -70,6 +70,7 @@ class Bill(models.Model):
             self.status = self.Status.CLEARED
             if self.cleared_at is None:
                 from django.utils import timezone
+
                 self.cleared_at = timezone.now()
         else:
             self.status = self.Status.OPEN

@@ -1,5 +1,10 @@
 # reports/views.py
 
+from __future__ import annotations
+
+import logging
+from html import escape
+
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, views
@@ -15,23 +20,27 @@ from reports.serializers import (
     PrintableInvoiceListSerializer,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def build_invoice_html(invoice):
-    items_rows = "".join([
-        f"""<tr>
-          <td>{item.description}</td>
-          <td class="r">{item.quantity}</td>
-          <td class="r">{item.rate}</td>
-          <td class="r">{item.amount}</td>
+    items_rows = "".join(
+        [
+            f"""<tr>
+          <td>{escape(str(item.description or ""))}</td>
+          <td class="r">{escape(str(item.quantity))}</td>
+          <td class="r">{escape(str(item.rate))}</td>
+          <td class="r">{escape(str(item.amount))}</td>
         </tr>"""
-        for item in invoice.items.all()
-    ])
+            for item in invoice.items.all()
+        ]
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Invoice {invoice.invoice_number}</title>
+  <title>Invoice {escape(str(invoice.invoice_number))}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap');
 
@@ -197,28 +206,28 @@ def build_invoice_html(invoice):
     <div class="bill-to-block">
       <div class="bill-label">Bill To</div>
       <p>
-        <strong>{invoice.customer_name}</strong><br />
-        {invoice.customer_address}<br />
-        {invoice.customer_phone}<br />
-        GST: {invoice.gst_number}
+        <strong>{escape(str(invoice.customer_name or ""))}</strong><br />
+        {escape(str(invoice.customer_address or ""))}<br />
+        {escape(str(invoice.customer_phone or ""))}<br />
+        GST: {escape(str(invoice.gst_number or ""))}
       </p>
     </div>
     <div class="invoice-meta-block">
       <div class="meta-row">
         <span class="m-label">Invoice No.:</span>
-        <span class="m-value">{invoice.invoice_number}</span>
+        <span class="m-value">{escape(str(invoice.invoice_number))}</span>
       </div>
       <div class="meta-row">
         <span class="m-label">Invoice Date:</span>
-        <span class="m-value">{invoice.invoice_date}</span>
+        <span class="m-value">{escape(str(invoice.invoice_date))}</span>
       </div>
     </div>
   </div>
 
   <div class="pills-row">
-    <div class="pill">Route: <span>{invoice.route_name}</span></div>
-    <div class="pill">Outlet: <span>{invoice.outlet_name}</span></div>
-    <div class="pill">Brand: <span>{invoice.brand}</span></div>
+    <div class="pill">Route: <span>{escape(str(invoice.route_name or ""))}</span></div>
+    <div class="pill">Outlet: <span>{escape(str(invoice.outlet_name or ""))}</span></div>
+    <div class="pill">Brand: <span>{escape(str(invoice.brand or ""))}</span></div>
   </div>
 
   <table>
@@ -239,19 +248,19 @@ def build_invoice_html(invoice):
     <div class="totals-block">
       <div class="totals-line top-border">
         <span class="tl-label">Subtotal</span>
-        <span class="tl-value">{invoice.subtotal}</span>
+        <span class="tl-value">{escape(str(invoice.subtotal))}</span>
       </div>
       <div class="totals-line">
         <span class="tl-label">Tax</span>
-        <span class="tl-value">{invoice.tax_amount}</span>
+        <span class="tl-value">{escape(str(invoice.tax_amount))}</span>
       </div>
       <div class="totals-line">
         <span class="tl-label">Discount</span>
-        <span class="tl-value">- {invoice.discount_amount}</span>
+        <span class="tl-value">- {escape(str(invoice.discount_amount))}</span>
       </div>
       <div class="totals-line grand">
         <span class="tl-label">Total Due</span>
-        <span class="tl-value">{invoice.total_amount}</span>
+        <span class="tl-value">{escape(str(invoice.total_amount))}</span>
       </div>
     </div>
   </div>
@@ -264,11 +273,11 @@ def build_invoice_html(invoice):
   <div class="footer-grid">
     <div class="footer-block">
       <div class="fb-label">Notes</div>
-      <p>{invoice.notes}</p>
+      <p>{escape(str(invoice.notes or ""))}</p>
     </div>
     <div class="footer-block">
       <div class="fb-label">Terms &amp; Conditions</div>
-      <p>{invoice.terms}</p>
+      <p>{escape(str(invoice.terms or ""))}</p>
     </div>
   </div>
 
@@ -283,7 +292,7 @@ def build_invoice_html(invoice):
 
 class PrintableInvoiceListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAdmin]
-    queryset = PrintableInvoice.objects.all().select_related("linked_bill").prefetch_related("items")
+    queryset = PrintableInvoice.objects.all().select_related("linked_bill").prefetch_related("items__product")
     ordering_fields = ["created_at", "invoice_date", "invoice_number", "total_amount"]
     search_fields = ["invoice_number", "customer_name", "route_name", "outlet_name", "brand"]
 
@@ -315,7 +324,7 @@ class PrintableInvoiceListCreateView(generics.ListCreateAPIView):
 
 class PrintableInvoiceRetrieveView(generics.RetrieveAPIView):
     permission_classes = [IsAdmin]
-    queryset = PrintableInvoice.objects.all().select_related("linked_bill").prefetch_related("items")
+    queryset = PrintableInvoice.objects.all().select_related("linked_bill").prefetch_related("items__product")
     serializer_class = PrintableInvoiceDetailSerializer
 
 
@@ -324,7 +333,7 @@ class PrintableInvoicePrintView(views.APIView):
 
     def get(self, request, pk, *args, **kwargs):
         invoice = get_object_or_404(
-            PrintableInvoice.objects.prefetch_related("items"),
+            PrintableInvoice.objects.prefetch_related("items__product"),
             pk=pk,
         )
         html = build_invoice_html(invoice)
@@ -336,12 +345,19 @@ class PrintableInvoicePDFView(views.APIView):
 
     def get(self, request, pk, *args, **kwargs):
         invoice = get_object_or_404(
-            PrintableInvoice.objects.prefetch_related("items"),
+            PrintableInvoice.objects.prefetch_related("items__product"),
             pk=pk,
         )
-        html = build_invoice_html(invoice)
-
-        pdf_bytes = HTML(string=html, base_url=request.build_absolute_uri("/")).write_pdf()
+        try:
+            html = build_invoice_html(invoice)
+            pdf_bytes = HTML(string=html, base_url=request.build_absolute_uri("/")).write_pdf()
+        except Exception as exc:
+            logger.exception(
+                "Printable invoice PDF generation failed",
+                extra={"invoice_id": invoice.id},
+                exc_info=exc,
+            )
+            raise
 
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="{invoice.invoice_number}.pdf"'

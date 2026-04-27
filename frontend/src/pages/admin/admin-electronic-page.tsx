@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/common/page-header";
 import { PaymentsTable } from "@/components/payments/payments-table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { usePayments } from "@/hooks/usePayments";
 import { exportPaymentsApi } from "@/api/payments.api";
 import { downloadBlob, getApiError } from "@/lib/utils";
@@ -29,47 +29,45 @@ export default function AdminElectronicPage() {
 
   const rows = query.data?.results ?? [];
 
+  async function handleExport() {
+    if (startDate && endDate && startDate > endDate) {
+      toast.error("Start date cannot be after end date.");
+      return;
+    }
+
+    if ((query.data?.count ?? 0) === 0) {
+      toast.info("No electronic records available to export in the selected date range.");
+      return;
+    }
+
+    try {
+      const blob = await exportPaymentsApi({
+        payment_method: "electronic",
+        start_date: startDate || undefined,
+        end_date: endDate || undefined,
+      });
+      downloadBlob(blob, "electronic_history.xlsx");
+      toast.success("Electronic export started");
+    } catch (error) {
+      toast.error(getApiError(error));
+    }
+  }
+
   return (
     <AppShell title="Electronic History">
-      <div className="space-y-6">
+      <div className="w-full max-w-none space-y-6">
         <PageHeader
           title="Electronic History"
           description="Track electronic submissions and update clearance status."
           actions={
-            <Button
-              className="w-full sm:w-auto"
-              variant="outline"
-              onClick={async () => {
-                if (startDate && endDate && startDate > endDate) {
-                  toast.error("Start date cannot be after end date.");
-                  return;
-                }
-
-                if ((query.data?.count ?? 0) === 0) {
-                  toast.info("No electronic records available to export in the selected date range.");
-                  return;
-                }
-
-                try {
-                  const blob = await exportPaymentsApi({
-                    payment_method: "electronic",
-                    start_date: startDate || undefined,
-                    end_date: endDate || undefined,
-                  });
-                  downloadBlob(blob, "electronic_history.xlsx");
-                  toast.success("Electronic export started");
-                } catch (error) {
-                  toast.error(getApiError(error));
-                }
-              }}
-            >
+            <Button className="w-full sm:w-auto" variant="outline" onClick={() => void handleExport()}>
               <Download className="mr-2 h-4 w-4" />
               Export XLSX
             </Button>
           }
         />
 
-        <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="w-full rounded-[18px] border border-slate-200 bg-white p-4 shadow-sm">
           <div className="md:hidden">
             <Button
               type="button"
@@ -85,11 +83,27 @@ export default function AdminElectronicPage() {
           <div className={`mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3 ${showMobileFilters ? "block" : "hidden md:grid"}`}>
             <div>
               <label className="mb-2 block text-sm font-medium text-slate-700">Start Date</label>
-              <Input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+              <DateInput
+                value={startDate}
+                onChange={(value) => {
+                  setPage(1);
+                  setStartDate(value);
+                }}
+                clearable
+                max={endDate || undefined}
+              />
             </div>
             <div>
               <label className="mb-2 block text-sm font-medium text-slate-700">End Date</label>
-              <Input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+              <DateInput
+                value={endDate}
+                onChange={(value) => {
+                  setPage(1);
+                  setEndDate(value);
+                }}
+                clearable
+                min={startDate || undefined}
+              />
             </div>
             <div className="flex items-end">
               <Button
@@ -116,46 +130,22 @@ export default function AdminElectronicPage() {
             description="Electronic payment entries will appear here once recorded."
           />
         ) : (
-          <PaymentsTable
-            data={rows}
-            total={query.data?.count ?? 0}
-            page={page}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            editableStatus
-          />
+          <div className="w-full">
+            <PaymentsTable
+              data={rows}
+              total={query.data?.count ?? 0}
+              page={page}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              editableStatus
+            />
+          </div>
         )}
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 p-3 backdrop-blur md:hidden">
         <div className="mx-auto max-w-3xl">
-          <Button
-            className="w-full"
-            variant="outline"
-            onClick={async () => {
-              if (startDate && endDate && startDate > endDate) {
-                toast.error("Start date cannot be after end date.");
-                return;
-              }
-
-              if ((query.data?.count ?? 0) === 0) {
-                toast.info("No electronic records available to export in the selected date range.");
-                return;
-              }
-
-              try {
-                const blob = await exportPaymentsApi({
-                  payment_method: "electronic",
-                  start_date: startDate || undefined,
-                  end_date: endDate || undefined,
-                });
-                downloadBlob(blob, "electronic_history.xlsx");
-                toast.success("Electronic export started");
-              } catch (error) {
-                toast.error(getApiError(error));
-              }
-            }}
-          >
+          <Button className="w-full" variant="outline" onClick={() => void handleExport()}>
             <Download className="mr-2 h-4 w-4" />
             Export XLSX
           </Button>

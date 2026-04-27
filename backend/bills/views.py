@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import threading
 
 from drf_spectacular.utils import extend_schema
@@ -21,6 +22,8 @@ from bills.serializers import (
 from bills.utils import build_bills_export_response, import_bills_from_excel
 from core.permissions import IsAdmin, IsDRA
 from core.utils import create_audit_log
+
+logger = logging.getLogger(__name__)
 
 
 class BillListCreateView(generics.ListCreateAPIView):
@@ -79,6 +82,7 @@ class BillRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         bill = serializer.save()
 
         from payments.services import reconcile_bill_from_payments
+
         reconcile_bill_from_payments(bill)
 
         create_audit_log(
@@ -111,7 +115,7 @@ class AssignBillsView(views.APIView):
         bill_ids = serializer.validated_data["bill_ids"]
         assigned_to = serializer.validated_data.get("assigned_to")
 
-        bills = list(Bill.objects.filter(id__in=bill_ids))
+        bills = list(Bill.objects.filter(id__in=bill_ids).select_related("assigned_to"))
         for bill in bills:
             old_assignee = bill.assigned_to_id
             bill.assigned_to = assigned_to
@@ -157,7 +161,7 @@ class ExportBillsView(views.APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request, *args, **kwargs):
-        queryset = Bill.objects.all()
+        queryset = Bill.objects.select_related("outlet__route", "assigned_to").all()
 
         start_date = request.query_params.get("start_date")
         end_date = request.query_params.get("end_date")
@@ -167,13 +171,19 @@ class ExportBillsView(views.APIView):
         if end_date:
             queryset = queryset.filter(invoice_date__lte=end_date)
 
-        return build_bills_export_response(queryset)
+        return build_bills_export_response(queryset, start_date=start_date, end_date=end_date)
 
 
 def _run_import_job(job_id: int, file_bytes: bytes):
     from io import BytesIO
+    from django.utils import timezone
 
-    job = BillImportJob.objects.get(id=job_id)
+    try:
+        job = BillImportJob.objects.get(id=job_id)
+    except BillImportJob.DoesNotExist:
+        logger.exception("Bill import job not found", extra={"job_id": job_id})
+        return
+
     try:
         result = import_bills_from_excel(BytesIO(file_bytes), job=job)
         create_audit_log(
@@ -184,10 +194,10 @@ def _run_import_job(job_id: int, file_bytes: bytes):
             metadata=result,
         )
     except Exception as exc:
+        logger.exception("Bill import failed", extra={"job_id": job_id}, exc_info=exc)
         job.status = BillImportJob.Status.FAILED
-        job.errors = [{"row": None, "message": str(exc)}]
+        job.errors = [{"row": None, "message": "Unexpected error during import."}]
         job.error_count = 1
-        from django.utils import timezone
         job.completed_at = timezone.now()
         job.save(update_fields=["status", "errors", "error_count", "completed_at"])
 

@@ -30,7 +30,7 @@ const MobilePaymentCard = memo(function MobilePaymentCard({
           <p className="truncate text-[15px] font-semibold text-slate-900">{payment.bill_invoice_number}</p>
           <p className="mt-1 text-sm text-slate-500">ID #{payment.id}</p>
         </div>
-        <div>
+        <div className="shrink-0">
           {editableStatus ? (
             <ChequeStatusSelect paymentId={payment.id} value={payment.cheque_status} />
           ) : (
@@ -70,11 +70,11 @@ const MobilePaymentCard = memo(function MobilePaymentCard({
         </div>
         <div>
           <p className="text-[11px] text-slate-500">Cheque Type</p>
-          <p className="text-sm font-medium text-slate-900">{payment.cheque_type || "—"}</p>
+          <p className="text-sm font-medium capitalize text-slate-900">{payment.cheque_type || "—"}</p>
         </div>
         <div>
           <p className="text-[11px] text-slate-500">Firm</p>
-          <p className="text-sm font-medium text-slate-900">{payment.firm}</p>
+          <p className="text-sm font-medium text-slate-900">{payment.firm || "—"}</p>
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ const DesktopPaymentRow = memo(function DesktopPaymentRow({
       <TD>{payment.transaction_number || "—"}</TD>
       <TD>{payment.cheque_number || "—"}</TD>
       <TD>{formatDate(payment.cheque_date)}</TD>
-      <TD>{payment.cheque_type || "—"}</TD>
+      <TD className="capitalize">{payment.cheque_type || "—"}</TD>
       <TD>
         {editableStatus ? (
           <ChequeStatusSelect paymentId={payment.id} value={payment.cheque_status} />
@@ -106,7 +106,7 @@ const DesktopPaymentRow = memo(function DesktopPaymentRow({
           <ChequeStatusBadge status={payment.cheque_status} />
         )}
       </TD>
-      <TD>{payment.firm}</TD>
+      <TD>{payment.firm || "—"}</TD>
       <TD>{formatDate(payment.created_at)}</TD>
     </tr>
   );
@@ -121,7 +121,7 @@ export function PaymentsTable({
   editableStatus = false,
 }: PaymentsTableProps) {
   return (
-    <div className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-sm">
+    <div className="w-full overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-sm">
       <div className="space-y-3 p-3.5 lg:hidden">
         {data.map((payment) => (
           <MobilePaymentCard
@@ -132,9 +132,9 @@ export function PaymentsTable({
         ))}
       </div>
 
-      <div className="hidden lg:block">
-        <TableWrapper className="rounded-none border-0 shadow-none">
-          <Table className="min-w-[1200px]">
+      <div className="hidden w-full lg:block">
+        <TableWrapper className="w-full rounded-none border-0 shadow-none">
+          <Table className="w-full min-w-[1320px] table-auto">
             <THead>
               <tr>
                 <TH>ID</TH>

@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Landmark,
   LogOut,
+  Package,
   Receipt,
   Wallet,
   X,
@@ -15,6 +16,7 @@ import { useAuth } from "@/context/AuthContext";
 
 const adminItems = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/products", label: "Products", icon: Package },
   { to: "/invoices/new", label: "Create Invoice", icon: FileText },
   { to: "/invoices", label: "Invoice List", icon: FileText },
   { to: "/admin/payments", label: "Payments", icon: Wallet },
@@ -37,6 +39,8 @@ export function AppSidebar({
 }) {
   const { user, logout } = useAuth();
   const items = user?.role === "admin" ? adminItems : draItems;
+
+  const initials = user?.full_name?.trim().slice(0, 2).toUpperCase() || "DR";
 
   const handleLogout = () => {
     logout();
@@ -62,11 +66,11 @@ export function AppSidebar({
         >
           <div
             className={cn(
-              "flex items-center gap-3",
+              "flex min-w-0 items-center gap-3",
               collapsed && !mobile ? "justify-center" : ""
             )}
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#7dd3fc,#38bdf8,#0ea5e9)] text-white shadow-[0_8px_20px_rgba(56,189,248,0.25)]">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#7dd3fc,#38bdf8,#0ea5e9)] text-white shadow-[0_8px_20px_rgba(56,189,248,0.25)]">
               <Zap className="h-5 w-5" />
             </div>
 
@@ -111,7 +115,8 @@ export function AppSidebar({
                 to === "/admin" ||
                 to === "/dra" ||
                 to === "/invoices" ||
-                to === "/invoices/new"
+                to === "/invoices/new" ||
+                to === "/products"
               }
               onClick={onNavigate}
               className={({ isActive }) =>
@@ -144,8 +149,8 @@ export function AppSidebar({
       >
         {!(collapsed && !mobile) ? (
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[linear-gradient(135deg,#7dd3fc,#0ea5e9)] text-xs font-bold text-white">
-              {user?.full_name?.slice(0, 2).toUpperCase() || "DR"}
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#7dd3fc,#0ea5e9)] text-xs font-bold text-white">
+              {initials}
             </div>
             <div className="min-w-0">
               <p className="truncate text-[13px] font-semibold text-slate-700">
@@ -168,6 +173,7 @@ export function AppSidebar({
               : "items-center gap-2 px-2 py-2"
           )}
           title={collapsed && !mobile ? "Sign out" : undefined}
+          aria-label="Sign out"
         >
           <LogOut className="h-4 w-4 shrink-0" />
           {!(collapsed && !mobile) ? <span>Sign out</span> : null}

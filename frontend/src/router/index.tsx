@@ -1,6 +1,4 @@
-// src/router/index.tsx
-
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import { lazy } from "react";
 import { ProtectedRoute, PublicOnlyRoute } from "@/components/layout/protected-route";
 
@@ -14,6 +12,9 @@ const DRADashboardPage = lazy(() => import("@/pages/dra/dra-dashboard-page"));
 const InvoicesListPage = lazy(() => import("@/pages/invoices/invoices-list-page"));
 const CreateInvoicePage = lazy(() => import("@/pages/invoices/create-invoice-page"));
 const InvoiceDetailPage = lazy(() => import("@/pages/invoices/invoice-detail-page"));
+const ProductsListPage = lazy(() => import("@/pages/products/products-list-page"));
+const ProductCreatePage = lazy(() => import("@/pages/products/product-create-page"));
+const ProductEditPage = lazy(() => import("@/pages/products/product-edit-page"));
 const ErrorPage = lazy(() => import("@/pages/error-page"));
 
 export const router = createBrowserRouter([
@@ -52,6 +53,18 @@ export const router = createBrowserRouter([
         element: <AdminElectronicPage />,
       },
       {
+        path: "/products",
+        element: <ProductsListPage />,
+      },
+      {
+        path: "/products/new",
+        element: <ProductCreatePage />,
+      },
+      {
+        path: "/products/:id/edit",
+        element: <ProductEditPage />,
+      },
+      {
         path: "/invoices",
         element: <InvoicesListPage />,
       },
@@ -77,7 +90,7 @@ export const router = createBrowserRouter([
   },
   {
     path: "*",
-    element: <LoginPage />,
+    element: <Navigate to="/login" replace />,
     errorElement: <ErrorPage />,
   },
 ]);

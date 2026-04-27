@@ -14,11 +14,11 @@ export function TableWrapper({ className, ...props }: HTMLAttributes<HTMLDivElem
 }
 
 export function Table({ className, ...props }: TableHTMLAttributes<HTMLTableElement>) {
-  return <table className={cn("min-w-full border-collapse", className)} {...props} />;
+  return <table className={cn("w-full min-w-full border-collapse", className)} {...props} />;
 }
 
 export function THead({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead className={cn("sticky top-0 bg-slate-50", className)} {...props} />;
+  return <thead className={cn("sticky top-0 z-[1] bg-slate-50", className)} {...props} />;
 }
 
 export function TBody({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {

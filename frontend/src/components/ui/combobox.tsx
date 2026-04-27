@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +24,7 @@ export const Combobox = memo(function Combobox({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   const selected = useMemo(
     () => options.find((option) => option.value === value),
@@ -31,12 +32,44 @@ export const Combobox = memo(function Combobox({
   );
 
   const filtered = useMemo(() => {
-    const lower = query.toLowerCase();
+    const lower = query.trim().toLowerCase();
+    if (!lower) return options;
     return options.filter((option) => option.label.toLowerCase().includes(lower));
   }, [options, query]);
 
+  useEffect(() => {
+    if (!open) return;
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!rootRef.current) return;
+      if (!rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    window.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (disabled && open) {
+      setOpen(false);
+    }
+  }, [disabled, open]);
+
   return (
-    <div className="relative">
+    <div ref={rootRef} className="relative">
       <button
         type="button"
         disabled={disabled}
@@ -45,11 +78,13 @@ export const Combobox = memo(function Combobox({
           "flex h-9 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800",
           "focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-300 disabled:cursor-not-allowed disabled:bg-slate-50"
         )}
+        aria-expanded={open}
+        aria-haspopup="listbox"
       >
-        <span className={selected ? "text-slate-800" : "text-slate-400"}>
+        <span className={cn("truncate", selected ? "text-slate-800" : "text-slate-400")}>
           {selected?.label ?? placeholder}
         </span>
-        <ChevronDown className="h-4 w-4 text-slate-500" />
+        <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
       </button>
 
       {open ? (
@@ -65,7 +100,7 @@ export const Combobox = memo(function Combobox({
               />
             </div>
           </div>
-          <div className="max-h-64 overflow-auto p-1">
+          <div className="max-h-64 overflow-auto p-1" role="listbox">
             {filtered.length > 0 ? (
               filtered.map((option) => (
                 <button
@@ -78,8 +113,8 @@ export const Combobox = memo(function Combobox({
                   }}
                   className="flex min-h-8 w-full items-center justify-between rounded-xl px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-sky-50"
                 >
-                  <span>{option.label}</span>
-                  {option.value === value ? <Check className="h-4 w-4 text-sky-700" /> : null}
+                  <span className="truncate">{option.label}</span>
+                  {option.value === value ? <Check className="h-4 w-4 shrink-0 text-sky-700" /> : null}
                 </button>
               ))
             ) : (
