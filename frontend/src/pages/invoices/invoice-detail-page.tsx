@@ -1,12 +1,16 @@
-import { ArrowLeft, Download, Printer } from "lucide-react";
+// src/pages/invoices/invoice-detail-page.tsx
+import { useCallback, useState } from "react";
+import { ArrowLeft, Download, Pencil, Printer, Trash2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/page-header";
+import { InvoiceStatusBadge } from "@/components/common/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TableWrapper, TBody, TD, TH, THead } from "@/components/ui/table";
+import { DeleteInvoiceDialog } from "@/components/invoices/delete-invoice-dialog";
 import { downloadInvoicePdfApi, getPrintableInvoiceHtmlApi } from "@/api/invoices.api";
 import { useInvoiceReport } from "@/hooks/useInvoices";
 import { downloadBlob, formatCurrency, formatDate, getApiError } from "@/lib/utils";
@@ -17,8 +21,9 @@ export default function InvoiceDetailPage() {
   const params = useParams();
   const invoiceId = Number(params.id);
   const query = useInvoiceReport(invoiceId, Number.isFinite(invoiceId));
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  async function handlePrint() {
+  const handlePrint = useCallback(async () => {
     if (!Number.isFinite(invoiceId) || !query.data) return;
 
     try {
@@ -41,9 +46,9 @@ export default function InvoiceDetailPage() {
     } catch (error) {
       toast.error(getApiError(error));
     }
-  }
+  }, [invoiceId, query.data]);
 
-  async function handleDownloadPdf() {
+  const handleDownloadPdf = useCallback(async () => {
     if (!Number.isFinite(invoiceId) || !query.data) return;
 
     try {
@@ -53,7 +58,19 @@ export default function InvoiceDetailPage() {
     } catch (error) {
       toast.error(getApiError(error));
     }
-  }
+  }, [invoiceId, query.data]);
+
+  const handleBack = useCallback(() => {
+    navigate("/invoices");
+  }, [navigate]);
+
+  const handleEdit = useCallback((id: number) => {
+    navigate(`/invoices/${id}/edit`);
+  }, [navigate]);
+
+  const handleDeleted = useCallback(() => {
+    navigate("/invoices", { replace: true });
+  }, [navigate]);
 
   if (!Number.isFinite(invoiceId)) {
     return (
@@ -73,12 +90,16 @@ export default function InvoiceDetailPage() {
           description="View printable invoice details and linked bill information."
           actions={
             <div className="hidden sm:flex sm:w-auto sm:flex-row sm:flex-wrap sm:gap-2">
-              <Button className="w-full sm:w-auto" variant="outline" onClick={() => navigate("/invoices")}>
+              <Button className="w-full sm:w-auto" variant="outline" onClick={handleBack}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to List
               </Button>
               {invoice ? (
                 <>
+                  <Button className="w-full sm:w-auto" variant="outline" onClick={() => handleEdit(invoice.id)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </Button>
                   <Button className="w-full sm:w-auto" onClick={() => void handlePrint()}>
                     <Printer className="mr-2 h-4 w-4" />
                     Print
@@ -86,6 +107,10 @@ export default function InvoiceDetailPage() {
                   <Button className="w-full sm:w-auto" variant="outline" onClick={() => void handleDownloadPdf()}>
                     <Download className="mr-2 h-4 w-4" />
                     Download PDF
+                  </Button>
+                  <Button className="w-full sm:w-auto" variant="outline" onClick={() => setDeleteDialogOpen(true)}>
+                    <Trash2 className="mr-2 h-4 w-4 text-red-500" />
+                    Delete
                   </Button>
                 </>
               ) : null}
@@ -105,10 +130,15 @@ export default function InvoiceDetailPage() {
                   <CardTitle>Invoice Header</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2.5 text-sm">
+                  <p>
+                    <span className="font-medium text-slate-900">Status:</span>{" "}
+                    <InvoiceStatusBadge status={invoice.status} />
+                  </p>
                   <p className="break-words"><span className="font-medium text-slate-900">Invoice Number:</span> {invoice.invoice_number}</p>
                   <p><span className="font-medium text-slate-900">Invoice Date:</span> {formatDate(invoice.invoice_date)}</p>
                   <p><span className="font-medium text-slate-900">Creation Mode:</span> {invoice.creation_mode.replaceAll("_", " ")}</p>
                   <p><span className="font-medium text-slate-900">Created At:</span> {formatDate(invoice.created_at)}</p>
+                  <p><span className="font-medium text-slate-900">Updated At:</span> {formatDate(invoice.updated_at)}</p>
                   <p>
                     <span className="font-medium text-slate-900">Linked Bill ID:</span>{" "}
                     {invoice.linked_bill_id ?? "—"}
@@ -220,9 +250,13 @@ export default function InvoiceDetailPage() {
 
             <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 p-2.5 backdrop-blur sm:hidden">
               <div className="mx-auto flex max-w-3xl gap-2">
-                <Button className="flex-1" variant="outline" onClick={() => navigate("/invoices")}>
+                <Button className="flex-1" variant="outline" onClick={handleBack}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
+                </Button>
+                <Button className="flex-1" variant="outline" onClick={() => handleEdit(invoice.id)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
                 </Button>
                 <Button className="flex-1" onClick={() => void handlePrint()}>
                   <Printer className="mr-2 h-4 w-4" />
@@ -232,12 +266,23 @@ export default function InvoiceDetailPage() {
                   <Download className="mr-2 h-4 w-4" />
                   PDF
                 </Button>
+                <Button className="flex-1" variant="outline" onClick={() => setDeleteDialogOpen(true)}>
+                  <Trash2 className="mr-2 h-4 w-4 text-red-500" />
+                  Delete
+                </Button>
               </div>
             </div>
 
             <div className="h-16 sm:hidden" />
           </>
         )}
+
+        <DeleteInvoiceDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          invoiceId={invoice?.id ?? null}
+          onDeleted={handleDeleted}
+        />
       </div>
     </AppShell>
   );

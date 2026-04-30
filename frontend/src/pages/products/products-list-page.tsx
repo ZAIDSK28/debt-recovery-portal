@@ -1,5 +1,5 @@
 // src/pages/products/products-list-page.tsx
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Edit3, Package, Plus, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -35,14 +35,27 @@ export default function ProductsListPage() {
   const query = useProducts(params);
   const rows = query.data?.results ?? [];
 
-  async function handleDelete(id: number) {
+  const handleCreate = useCallback(() => {
+    navigate("/products/new");
+  }, [navigate]);
+
+  const handleEdit = useCallback((id: number) => {
+    navigate(`/products/${id}/edit`);
+  }, [navigate]);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, []);
+
+  const handleDelete = useCallback(async (id: number) => {
     try {
       await deleteMutation.mutateAsync(id);
       toast.success("Product deleted");
     } catch (error) {
       toast.error(getApiError(error));
     }
-  }
+  }, [deleteMutation]);
 
   return (
     <AppShell title="Products">
@@ -51,7 +64,7 @@ export default function ProductsListPage() {
           title="Products"
           description="Manage products used in printable invoice creation."
           actions={
-            <Button className="w-full sm:w-auto" onClick={() => navigate("/products/new")}>
+            <Button className="w-full sm:w-auto" onClick={handleCreate}>
               <Plus className="mr-2 h-4 w-4" />
               New Product
             </Button>
@@ -63,10 +76,7 @@ export default function ProductsListPage() {
             <SearchInput
               placeholder="Search by code, name, or category..."
               value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
+              onChange={(event) => handleSearchChange(event.target.value)}
             />
           </div>
         </div>
@@ -79,7 +89,7 @@ export default function ProductsListPage() {
             title="No products found"
             description="Create a product to start using product-backed invoice items."
             action={
-              <Button onClick={() => navigate("/products/new")}>
+              <Button onClick={handleCreate}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Product
               </Button>
@@ -115,7 +125,7 @@ export default function ProductsListPage() {
                       <TD>{formatDate(product.created_at)}</TD>
                       <TD className="whitespace-nowrap">
                         <div className="flex justify-end gap-2">
-                          <Button variant="outline" size="sm" onClick={() => navigate(`/products/${product.id}/edit`)}>
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(product.id)}>
                             <Edit3 className="mr-1 h-3.5 w-3.5" />
                             Edit
                           </Button>

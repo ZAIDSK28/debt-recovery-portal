@@ -6,7 +6,7 @@ import logging
 
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
 
 from core.permissions import IsAdmin
@@ -14,7 +14,15 @@ from core.throttling import LoginRateThrottle, OTPResendRateThrottle, OTPVerifyR
 from core.utils import create_audit_log
 from users.auth_utils import create_and_send_admin_otp, issue_tokens_for_user
 from users.models import AdminOTP, User
-from users.serializers import LoginSerializer, UserSerializer, VerifyOTPSerializer
+from users.serializers import (
+    LoginSerializer,
+    UserAdminSerializer,
+    UserCreateSerializer,
+    UserSerializer,
+    UserSetPasswordSerializer,
+    UserUpdateSerializer,
+    VerifyOTPSerializer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -130,11 +138,15 @@ class ResendOTPView(generics.GenericAPIView):
         return Response({"detail": "OTP sent."}, status=status.HTTP_200_OK)
 
 
-class UserListView(generics.ListAPIView):
-    serializer_class = UserSerializer
+class UserListView(generics.ListCreateAPIView):
     permission_classes = [IsAdmin]
     queryset = User.objects.all().order_by("full_name", "username")
     pagination_class = None
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return UserCreateSerializer
+        return UserAdminSerializer
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -142,3 +154,93 @@ class UserListView(generics.ListAPIView):
         if role:
             queryset = queryset.filter(role=role)
         return queryset
+
+    def perform_create(self, serializer):
+        user = serializer.save()
+        create_audit_log(
+            actor=self.request.user,
+            action="user.created",
+            entity_type="user",
+            entity_id=str(user.id),
+            metadata={"username": user.username, "role": user.role},
+        )
+
+
+class UserRetrieveUpdateView(generics.RetrieveUpdateAPIView):
+    permission_classes = [IsAdmin]
+    queryset = User.objects.all()
+
+    def get_serializer_class(self):
+        if self.request.method in ["PATCH", "PUT"]:
+            return UserUpdateSerializer
+        return UserAdminSerializer
+
+    def perform_update(self, serializer):
+        user = serializer.save()
+        create_audit_log(
+            actor=self.request.user,
+            action="user.updated",
+            entity_type="user",
+            entity_id=str(user.id),
+            metadata={"username": user.username, "role": user.role, "is_active": user.is_active},
+        )
+
+
+class UserSetPasswordView(views.APIView):
+    permission_classes = [IsAdmin]
+
+    def post(self, request, pk, *args, **kwargs):
+        user = generics.get_object_or_404(User, pk=pk)
+        serializer = UserSetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user.set_password(serializer.validated_data["password"])
+        user.save(update_fields=["password"])
+
+        create_audit_log(
+            actor=request.user,
+            action="user.password_set",
+            entity_type="user",
+            entity_id=str(user.id),
+            metadata={"username": user.username},
+        )
+
+        return Response({"detail": "Password updated."}, status=status.HTTP_200_OK)
+
+
+class UserActivateView(views.APIView):
+    permission_classes = [IsAdmin]
+
+    def post(self, request, pk, *args, **kwargs):
+        user = generics.get_object_or_404(User, pk=pk)
+        user.is_active = True
+        user.save(update_fields=["is_active"])
+
+        create_audit_log(
+            actor=request.user,
+            action="user.activated",
+            entity_type="user",
+            entity_id=str(user.id),
+            metadata={"username": user.username},
+        )
+
+        return Response({"detail": "User activated."}, status=status.HTTP_200_OK)
+
+
+class UserDeactivateView(views.APIView):
+    permission_classes = [IsAdmin]
+
+    def post(self, request, pk, *args, **kwargs):
+        user = generics.get_object_or_404(User, pk=pk)
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+
+        create_audit_log(
+            actor=request.user,
+            action="user.deactivated",
+            entity_type="user",
+            entity_id=str(user.id),
+            metadata={"username": user.username},
+        )
+
+        return Response({"detail": "User deactivated."}, status=status.HTTP_200_OK)

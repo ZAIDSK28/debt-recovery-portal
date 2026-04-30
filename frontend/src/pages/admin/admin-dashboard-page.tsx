@@ -1,5 +1,6 @@
+// src/pages/admin/admin-dashboard-page.tsx
 import { useMemo, useState } from "react";
-import { Download, FileSpreadsheet, Filter, HandCoins, Landmark, Plus, ReceiptIndianRupee, Wallet } from "lucide-react";
+import { BadgeIndianRupee, Download, FileSpreadsheet, Filter, Plus, RefreshCw, ReceiptIndianRupee, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/page-header";
@@ -15,8 +16,8 @@ import { BillFormModal } from "@/components/bills/bill-form-modal";
 import { ImportBillsDialog } from "@/components/bills/import-bills-dialog";
 import { DeleteBillDialog } from "@/components/bills/delete-bill-dialog";
 import { useBills } from "@/hooks/useBills";
+import { useDashboardDailyCollections, useDashboardSummary, useRebuildDashboardDailyCollections } from "@/hooks/useDashboard";
 import { useDebounce } from "@/hooks/useDebounce";
-import { useDailySummary, useTodayTotals } from "@/hooks/useReports";
 import { useUsers } from "@/hooks/useUsers";
 import { exportBillsWithMetaApi } from "@/api/bills.api";
 import { downloadBlob, fallbackBillsExportFileName, formatCurrency, getApiError } from "@/lib/utils";
@@ -39,6 +40,8 @@ export default function AdminDashboardPage() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [deleteBillId, setDeleteBillId] = useState<number | null>(null);
 
+  const metricsDays = 30;
+
   const billParams = useMemo(
     () => ({
       page,
@@ -51,8 +54,9 @@ export default function AdminDashboardPage() {
 
   const billsQuery = useBills(billParams);
   const usersQuery = useUsers("dra");
-  const totalsQuery = useTodayTotals();
-  const dailySummaryQuery = useDailySummary(30);
+  const dashboardSummaryQuery = useDashboardSummary(metricsDays);
+  const dailyCollectionsQuery = useDashboardDailyCollections(metricsDays);
+  const rebuildMutation = useRebuildDashboardDailyCollections(metricsDays);
 
   const invoices = billsQuery.data?.results ?? [];
   const totalInvoices = billsQuery.data?.count ?? 0;
@@ -83,6 +87,15 @@ export default function AdminDashboardPage() {
     }
   }
 
+  async function handleRebuildMetrics() {
+    try {
+      await rebuildMutation.mutateAsync();
+      toast.success("Dashboard metrics rebuilt");
+    } catch (error) {
+      toast.error(getApiError(error));
+    }
+  }
+
   const actions = useMemo(
     () => (
       <>
@@ -104,9 +117,13 @@ export default function AdminDashboardPage() {
           <Download className="mr-2 h-4 w-4" />
           Export Bills
         </Button>
+        <Button className="w-full sm:w-auto" variant="outline" onClick={() => void handleRebuildMetrics()} disabled={rebuildMutation.isPending}>
+          <RefreshCw className="mr-2 h-4 w-4" />
+          {rebuildMutation.isPending ? "Refreshing..." : "Refresh Metrics"}
+        </Button>
       </>
     ),
-    [billExportEndDate, billExportStartDate, billsQuery.data?.count]
+    [rebuildMutation.isPending, billExportEndDate, billExportStartDate, billsQuery.data?.count]
   );
 
   return (
@@ -120,35 +137,53 @@ export default function AdminDashboardPage() {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard
-            title="Today Cash Collection"
-            value={formatCurrency(totalsQuery.data?.cash_total ?? 0)}
-            icon={HandCoins}
-            accentClassName="bg-green-500"
+            title="Total Collection"
+            value={formatCurrency(dashboardSummaryQuery.data?.total_collection ?? 0)}
+            icon={BadgeIndianRupee}
+            accentClassName="bg-violet-500"
           />
           <KpiCard
-            title="Today UPI Collection"
-            value={formatCurrency(totalsQuery.data?.upi_total ?? 0)}
+            title="Total Payments"
+            value={String(dashboardSummaryQuery.data?.total_payments ?? 0)}
             icon={Wallet}
             accentClassName="bg-sky-500"
           />
           <KpiCard
-            title="Today Cleared Cheques"
-            value={formatCurrency(totalsQuery.data?.cheque_total ?? 0)}
+            title="Cleared Bills"
+            value={String(dashboardSummaryQuery.data?.total_cleared_bills ?? 0)}
             icon={ReceiptIndianRupee}
             accentClassName="bg-amber-500"
           />
           <KpiCard
-            title="Today Electronic Clearance"
-            value={formatCurrency(totalsQuery.data?.electronic_total ?? 0)}
-            icon={Landmark}
+            title="Cash Collection"
+            value={formatCurrency(dashboardSummaryQuery.data?.total_cash ?? 0)}
+            icon={Wallet}
+            accentClassName="bg-green-500"
+          />
+          <KpiCard
+            title="UPI Collection"
+            value={formatCurrency(dashboardSummaryQuery.data?.total_upi ?? 0)}
+            icon={Wallet}
+            accentClassName="bg-sky-500"
+          />
+          <KpiCard
+            title="Cheque Collection"
+            value={formatCurrency(dashboardSummaryQuery.data?.total_cheque ?? 0)}
+            icon={ReceiptIndianRupee}
+            accentClassName="bg-amber-500"
+          />
+          <KpiCard
+            title="Electronic Collection"
+            value={formatCurrency(dashboardSummaryQuery.data?.total_electronic ?? 0)}
+            icon={Wallet}
             accentClassName="bg-violet-500"
           />
         </div>
 
-        {dailySummaryQuery.isLoading ? (
+        {dailyCollectionsQuery.isLoading ? (
           <Skeleton className="h-[320px] w-full rounded-2xl sm:h-[420px]" />
         ) : (
-          <DailyCollectionsChart data={dailySummaryQuery.data ?? []} />
+          <DailyCollectionsChart data={dailyCollectionsQuery.data ?? []} />
         )}
 
         <div className="w-full space-y-4 rounded-[18px] border border-slate-200 bg-white p-4 shadow-sm">

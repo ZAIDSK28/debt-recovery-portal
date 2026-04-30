@@ -1,3 +1,4 @@
+// src/router/index.tsx
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { lazy } from "react";
 import { ProtectedRoute, PublicOnlyRoute } from "@/components/layout/protected-route";
@@ -8,10 +9,14 @@ const AdminDashboardPage = lazy(() => import("@/pages/admin/admin-dashboard-page
 const AdminPaymentsPage = lazy(() => import("@/pages/admin/admin-payments-page"));
 const AdminChequesPage = lazy(() => import("@/pages/admin/admin-cheques-page"));
 const AdminElectronicPage = lazy(() => import("@/pages/admin/admin-electronic-page"));
+const AdminUsersPage = lazy(() => import("@/pages/admin/admin-users-page"));
+const AdminUserCreatePage = lazy(() => import("@/pages/admin/admin-user-create-page"));
+const AdminUserEditPage = lazy(() => import("@/pages/admin/admin-user-edit-page"));
 const DRADashboardPage = lazy(() => import("@/pages/dra/dra-dashboard-page"));
 const InvoicesListPage = lazy(() => import("@/pages/invoices/invoices-list-page"));
 const CreateInvoicePage = lazy(() => import("@/pages/invoices/create-invoice-page"));
 const InvoiceDetailPage = lazy(() => import("@/pages/invoices/invoice-detail-page"));
+const InvoiceEditPage = lazy(() => import("@/pages/invoices/invoice-edit-page"));
 const ProductsListPage = lazy(() => import("@/pages/products/products-list-page"));
 const ProductCreatePage = lazy(() => import("@/pages/products/product-create-page"));
 const ProductEditPage = lazy(() => import("@/pages/products/product-edit-page"));
@@ -53,6 +58,18 @@ export const router = createBrowserRouter([
         element: <AdminElectronicPage />,
       },
       {
+        path: "/admin/users",
+        element: <AdminUsersPage />,
+      },
+      {
+        path: "/admin/users/new",
+        element: <AdminUserCreatePage />,
+      },
+      {
+        path: "/admin/users/:id/edit",
+        element: <AdminUserEditPage />,
+      },
+      {
         path: "/products",
         element: <ProductsListPage />,
       },
@@ -71,6 +88,10 @@ export const router = createBrowserRouter([
       {
         path: "/invoices/new",
         element: <CreateInvoicePage />,
+      },
+      {
+        path: "/invoices/:id/edit",
+        element: <InvoiceEditPage />,
       },
       {
         path: "/invoices/:id",

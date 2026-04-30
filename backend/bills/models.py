@@ -36,7 +36,15 @@ class Bill(models.Model):
     class Status(models.TextChoices):
         OPEN = "open", "Open"
         CLEARED = "cleared", "Cleared"
+        CANCELLED = "cancelled", "Cancelled"
 
+    invoice = models.OneToOneField(
+        "reports.PrintableInvoice",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="recovery_bill",
+    )
     invoice_number = models.CharField(max_length=100, unique=True)
     invoice_date = models.DateField()
     outlet = models.ForeignKey(Outlet, on_delete=models.PROTECT, related_name="bills")
@@ -54,6 +62,7 @@ class Bill(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     cleared_at = models.DateTimeField(null=True, blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
@@ -62,15 +71,22 @@ class Bill(models.Model):
         return self.invoice_number
 
     def refresh_overdue(self) -> None:
+        if self.status == self.Status.CANCELLED:
+            self.overdue_days = 0
+            return
         self.overdue_days = calculate_overdue_days(self.invoice_date)
 
     def reconcile_status(self) -> None:
+        if self.status == self.Status.CANCELLED:
+            self.remaining_amount = Decimal("0.00")
+            self.cleared_at = None
+            return
+
         if self.remaining_amount <= Decimal("0.00"):
             self.remaining_amount = Decimal("0.00")
             self.status = self.Status.CLEARED
             if self.cleared_at is None:
                 from django.utils import timezone
-
                 self.cleared_at = timezone.now()
         else:
             self.status = self.Status.OPEN

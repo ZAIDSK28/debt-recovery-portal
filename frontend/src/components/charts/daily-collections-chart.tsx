@@ -1,3 +1,4 @@
+// src/components/charts/daily-collections-chart.tsx
 import { useMemo } from "react";
 import {
   Bar,
@@ -11,19 +12,15 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { DailySummary } from "@/types";
+import type { DashboardDailyCollection } from "@/types";
 
-export function DailyCollectionsChart({ data }: { data: DailySummary[] }) {
+export function DailyCollectionsChart({ data }: { data: DashboardDailyCollection[] }) {
   const chartData = useMemo(
     () =>
       data.map((item) => ({
         ...item,
         label: formatDate(item.date),
-        total:
-          Number(item.cash_total) +
-          Number(item.upi_total) +
-          Number(item.cheque_total) +
-          Number(item.electronic_total),
+        total: Number(item.total_collection),
       })),
     [data]
   );
@@ -53,10 +50,10 @@ export function DailyCollectionsChart({ data }: { data: DailySummary[] }) {
                 }}
               />
               <Legend />
-              <Bar dataKey="cash_total" name="Cash" fill="#16a34a" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="upi_total" name="UPI" fill="#0ea5e9" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="cheque_total" name="Cheque" fill="#d97706" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="electronic_total" name="Electronic" fill="#7c3aed" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="cash_total" name="Cash" stackId="a" fill="#16a34a" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="upi_total" name="UPI" stackId="a" fill="#0ea5e9" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="cheque_total" name="Cheque" stackId="a" fill="#d97706" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="electronic_total" name="Electronic" stackId="a" fill="#7c3aed" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

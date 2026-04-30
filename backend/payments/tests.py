@@ -1,6 +1,8 @@
 from datetime import date
 from decimal import Decimal
+from io import BytesIO
 
+import openpyxl
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -184,3 +186,139 @@ class PaymentBusinessRulesTests(APITestCase):
         self.authenticate_dra()
         response = self.client.get(reverse("payments-all"))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cash_payment_response_does_not_include_cheque_fields(self):
+        payment = Payment.objects.create(
+            bill=self.bill,
+            dra_username=self.dra.username,
+            payment_method="cash",
+            amount=Decimal("100.00"),
+            transaction_number="",
+            cheque_number="",
+            cheque_date=None,
+            cheque_type="",
+            cheque_status="",
+            firm="NA",
+        )
+
+        self.authenticate_admin()
+        response = self.client.get(reverse("payments-all"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        result = next(item for item in response.data["results"] if item["id"] == payment.id)
+        self.assertNotIn("cheque_number", result)
+        self.assertNotIn("cheque_date", result)
+        self.assertNotIn("cheque_type", result)
+        self.assertNotIn("cheque_status", result)
+
+    def test_upi_payment_response_does_not_include_cheque_fields(self):
+        payment = Payment.objects.create(
+            bill=self.bill,
+            dra_username=self.dra.username,
+            payment_method="upi",
+            amount=Decimal("150.00"),
+            transaction_number="UPI-123",
+            cheque_number="",
+            cheque_date=None,
+            cheque_type="",
+            cheque_status="",
+            firm="NA",
+        )
+
+        self.authenticate_admin()
+        response = self.client.get(reverse("payments-all"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        result = next(item for item in response.data["results"] if item["id"] == payment.id)
+        self.assertNotIn("cheque_number", result)
+        self.assertNotIn("cheque_date", result)
+        self.assertNotIn("cheque_type", result)
+        self.assertNotIn("cheque_status", result)
+
+    def test_cheque_payment_response_includes_cheque_fields(self):
+        payment = Payment.objects.create(
+            bill=self.bill,
+            dra_username=self.dra.username,
+            payment_method="cheque",
+            amount=Decimal("250.00"),
+            cheque_number="CHQ777",
+            cheque_date=date.today(),
+            cheque_type="rtgs",
+            cheque_status="pending",
+            firm="NA",
+        )
+
+        self.authenticate_admin()
+        response = self.client.get(reverse("payments-all"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        result = next(item for item in response.data["results"] if item["id"] == payment.id)
+        self.assertEqual(result["cheque_number"], "CHQ777")
+        self.assertIn("cheque_date", result)
+        self.assertEqual(result["cheque_type"], "rtgs")
+        self.assertEqual(result["cheque_status"], "pending")
+
+    def test_export_omits_cheque_columns_for_cash_only_dataset(self):
+        Payment.objects.create(
+            bill=self.bill,
+            dra_username=self.dra.username,
+            payment_method="cash",
+            amount=Decimal("120.00"),
+            transaction_number="",
+            cheque_number="",
+            cheque_date=None,
+            cheque_type="",
+            cheque_status="",
+            firm="NA",
+        )
+
+        self.authenticate_admin()
+        response = self.client.get(reverse("payments-export"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        workbook = openpyxl.load_workbook(BytesIO(response.content))
+        sheet = workbook["Payments"]
+        headers = [cell.value for cell in sheet[1]]
+
+        self.assertNotIn("Cheque Number", headers)
+        self.assertNotIn("Cheque Date", headers)
+        self.assertNotIn("Cheque Type", headers)
+        self.assertNotIn("Cheque Status", headers)
+
+    def test_export_includes_cheque_columns_when_cheque_payment_exists(self):
+        Payment.objects.create(
+            bill=self.bill,
+            dra_username=self.dra.username,
+            payment_method="cheque",
+            amount=Decimal("220.00"),
+            cheque_number="CHQ333",
+            cheque_date=date.today(),
+            cheque_type="neft",
+            cheque_status="pending",
+            firm="NA",
+        )
+
+        self.authenticate_admin()
+        response = self.client.get(reverse("payments-export"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        workbook = openpyxl.load_workbook(BytesIO(response.content))
+        sheet = workbook["Payments"]
+        headers = [cell.value for cell in sheet[1]]
+
+        self.assertIn("Cheque Number", headers)
+        self.assertIn("Cheque Date", headers)
+        self.assertIn("Cheque Type", headers)
+        self.assertIn("Cheque Status", headers)
+
+    def test_payments_list_returns_validation_error_for_invalid_start_date(self):
+        self.authenticate_admin()
+        response = self.client.get(reverse("payments-all"), {"start_date": "2026-99-99"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("start_date", response.data)
+
+    def test_payments_export_returns_validation_error_for_invalid_end_date(self):
+        self.authenticate_admin()
+        response = self.client.get(reverse("payments-export"), {"end_date": "bad-date"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("end_date", response.data)

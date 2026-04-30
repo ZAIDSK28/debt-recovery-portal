@@ -1,3 +1,4 @@
+// src/pages/invoices/create-invoice-page.tsx
 import { useNavigate } from "react-router-dom";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/page-header";

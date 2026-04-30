@@ -10,6 +10,11 @@ class PrintableInvoice(models.Model):
         PRINTABLE_ONLY = "printable_only", "Printable Only"
         PRINTABLE_AND_BILL = "printable_and_bill", "Printable And Bill"
 
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        FINALIZED = "finalized", "Finalized"
+        CANCELLED = "cancelled", "Cancelled"
+
     invoice_number = models.CharField(max_length=100, unique=True)
     invoice_date = models.DateField()
 
@@ -31,13 +36,7 @@ class PrintableInvoice(models.Model):
     terms = models.TextField(blank=True)
 
     creation_mode = models.CharField(max_length=30, choices=CreationMode.choices)
-    linked_bill = models.OneToOneField(
-        "bills.Bill",
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="printable_invoice",
-    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.FINALIZED)
 
     payload = models.JSONField(default=dict, blank=True)
 
@@ -49,6 +48,7 @@ class PrintableInvoice(models.Model):
         related_name="printable_invoices",
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["-created_at"]

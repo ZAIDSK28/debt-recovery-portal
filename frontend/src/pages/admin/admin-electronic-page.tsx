@@ -131,14 +131,15 @@ export default function AdminElectronicPage() {
           />
         ) : (
           <div className="w-full">
-            <PaymentsTable
-              data={rows}
-              total={query.data?.count ?? 0}
-              page={page}
-              pageSize={pageSize}
-              onPageChange={setPage}
-              editableStatus
-            />
+           <PaymentsTable
+            data={rows}
+            total={query.data?.count ?? 0}
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            showChequeColumns={false}
+            showStatusColumn={false}
+          />
           </div>
         )}
       </div>

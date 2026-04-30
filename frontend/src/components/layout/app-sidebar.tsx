@@ -1,3 +1,4 @@
+// src/components/layout/app-sidebar.tsx
 import {
   FileClock,
   FileText,
@@ -6,6 +7,7 @@ import {
   LogOut,
   Package,
   Receipt,
+  Users,
   Wallet,
   X,
   Zap,
@@ -22,6 +24,7 @@ const adminItems = [
   { to: "/admin/payments", label: "Payments", icon: Wallet },
   { to: "/admin/cheques", label: "Cheques", icon: Receipt },
   { to: "/admin/electronic", label: "Electronic", icon: FileClock },
+  { to: "/admin/users", label: "Users", icon: Users },
 ];
 
 const draItems = [{ to: "/dra", label: "Assigned Bills", icon: Landmark }];
@@ -116,7 +119,8 @@ export function AppSidebar({
                 to === "/dra" ||
                 to === "/invoices" ||
                 to === "/invoices/new" ||
-                to === "/products"
+                to === "/products" ||
+                to === "/admin/users"
               }
               onClick={onNavigate}
               className={({ isActive }) =>

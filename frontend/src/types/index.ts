@@ -2,10 +2,11 @@
 
 export type UserRole = "admin" | "dra";
 export type PaymentMethod = "cash" | "upi" | "cheque" | "electronic";
-export type ChequeStatus = "pending" | "cleared" | "bounced";
-export type ChequeType = "rtgs" | "neft" | "imps";
+export type ChequeStatus = "pending" | "cleared" | "bounced" | "";
+export type ChequeType = "rtgs" | "neft" | "imps" | "";
 export type Firm = "NA" | "MZ";
-export type BillStatus = "open" | "cleared";
+export type BillStatus = "open" | "cleared" | "cancelled";
+export type InvoiceStatus = "draft" | "finalized" | "cancelled";
 export type InvoiceCreationMode = "bill_only" | "printable_only" | "printable_and_bill";
 
 export interface User {
@@ -14,6 +15,7 @@ export interface User {
   full_name: string;
   email: string;
   role: UserRole;
+  is_active?: boolean;
   is_admin: boolean;
 }
 
@@ -43,6 +45,7 @@ export interface Product {
 
 export interface Invoice {
   id: number;
+  invoice_id?: number;
   invoice_number: string;
   invoice_date: string;
   outlet: number;
@@ -58,6 +61,7 @@ export interface Invoice {
   assigned_to_name?: string | null;
   created_at: string;
   cleared_at?: string | null;
+  cancelled_at?: string | null;
 }
 
 export interface Payment {
@@ -70,7 +74,7 @@ export interface Payment {
   transaction_number: string;
   cheque_number: string;
   cheque_date: string | null;
-  cheque_type: ChequeType | "";
+  cheque_type: ChequeType;
   cheque_status: ChequeStatus;
   firm: Firm;
   created_at: string;
@@ -89,6 +93,28 @@ export interface TodayTotals {
   upi_total: string;
   cheque_total: string;
   electronic_total: string;
+}
+
+export interface DashboardSummary {
+  total_collection: string;
+  total_cash: string;
+  total_upi: string;
+  total_cheque: string;
+  total_electronic: string;
+  total_payments: number;
+  total_cleared_bills: number;
+}
+
+export interface DashboardDailyCollection {
+  date: string;
+  cash_total: string;
+  upi_total: string;
+  cheque_total: string;
+  electronic_total: string;
+  total_collection: string;
+  payment_count: number;
+  bill_count_cleared: number;
+  generated_at: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -192,8 +218,10 @@ export interface InvoiceReportListItem {
   discount_amount: string;
   total_amount: string;
   creation_mode: InvoiceCreationMode;
+  status: InvoiceStatus;
   linked_bill_id: number | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface InvoiceReport {
@@ -214,10 +242,12 @@ export interface InvoiceReport {
   notes: string;
   terms: string;
   creation_mode: InvoiceCreationMode;
+  status: InvoiceStatus;
   linked_bill_id: number | null;
   payload: InvoiceReportPayload;
   items: InvoiceReportResponseItem[];
   created_at: string;
+  updated_at: string;
 }
 
 export interface CreateInvoiceReportPayload {
@@ -235,4 +265,24 @@ export interface CreateInvoiceReportPayload {
   terms?: string;
   creation_mode: InvoiceCreationMode;
   items: CreateInvoiceReportPayloadItem[];
+}
+
+export interface CreateUserPayload {
+  username: string;
+  password: string;
+  full_name: string;
+  email?: string;
+  role: UserRole;
+  is_active: boolean;
+}
+
+export interface UpdateUserPayload {
+  full_name?: string;
+  email?: string;
+  role?: UserRole;
+  is_active?: boolean;
+}
+
+export interface SetUserPasswordPayload {
+  password: string;
 }

@@ -1,3 +1,5 @@
+// src/components/invoices/invoice-form.tsx
+
 import { memo, useEffect, useMemo, useState } from "react";
 import { useFieldArray, useForm, useWatch, type Control, type UseFormReturn } from "react-hook-form";
 import { z } from "zod";
@@ -12,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Combobox } from "@/components/ui/combobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DateInput } from "@/components/ui/date-input";
-import { useCreateInvoiceReport } from "@/hooks/useInvoices";
+import { useCreateInvoiceReport, useUpdateInvoiceReport } from "@/hooks/useInvoices";
 import { useOutlets, useRoutes } from "@/hooks/useRoutes";
 import { useProducts } from "@/hooks/useProducts";
 import { formatCurrency, getApiError } from "@/lib/utils";
@@ -194,13 +196,20 @@ const InvoiceItemRow = memo(function InvoiceItemRow({
 });
 
 export function InvoiceForm({
+  initialInvoice,
   onCreated,
   onCreatedAndView,
+  onUpdated,
+  onLocked,
 }: {
+  initialInvoice?: InvoiceReport;
   onCreated?: (invoice: InvoiceReport) => void;
   onCreatedAndView?: (invoice: InvoiceReport) => void;
+  onUpdated?: (invoice: InvoiceReport) => void;
+  onLocked?: () => void;
 }) {
   const createMutation = useCreateInvoiceReport();
+  const updateMutation = useUpdateInvoiceReport(initialInvoice?.id ?? 0);
   const { data: routes = [] } = useRoutes();
   const [productSearch, setProductSearch] = useState("");
   const { data: productsResponse } = useProducts({
@@ -210,6 +219,7 @@ export function InvoiceForm({
   });
 
   const products = productsResponse?.results ?? [];
+  const isEditMode = Boolean(initialInvoice);
 
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceFormSchema),
@@ -235,6 +245,33 @@ export function InvoiceForm({
       ],
     },
   });
+
+  useEffect(() => {
+    if (!initialInvoice) return;
+
+    form.reset({
+      invoice_number: initialInvoice.invoice_number,
+      invoice_date: initialInvoice.invoice_date,
+      customer_name: initialInvoice.customer_name,
+      customer_address: initialInvoice.customer_address || "",
+      customer_phone: initialInvoice.customer_phone || "",
+      gst_number: initialInvoice.gst_number || "",
+      route_name: initialInvoice.route_name || "",
+      outlet_name: initialInvoice.outlet_name || "",
+      brand: initialInvoice.brand || "",
+      discount_amount: initialInvoice.discount_amount || "",
+      notes: initialInvoice.notes || "",
+      terms: initialInvoice.terms || "",
+      creation_mode: initialInvoice.creation_mode,
+      items:
+        initialInvoice.items.length > 0
+          ? initialInvoice.items.map((item) => ({
+              product_id: item.product_id ? String(item.product_id) : "",
+              quantity: item.quantity,
+            }))
+          : [{ product_id: "", quantity: "1.00" }],
+    });
+  }, [initialInvoice, form]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -329,6 +366,13 @@ export function InvoiceForm({
         })),
       };
 
+      if (isEditMode && initialInvoice) {
+        const updated = await updateMutation.mutateAsync(payload);
+        toast.success("Invoice updated successfully");
+        onUpdated?.(updated);
+        return;
+      }
+
       const created = await createMutation.mutateAsync(payload);
 
       if (created.linked_bill_id) {
@@ -354,6 +398,11 @@ export function InvoiceForm({
         });
       }
 
+      if (message === "Invoice cannot be edited after the first payment is recorded.") {
+        onLocked?.();
+        return;
+      }
+
       toast.error(message);
     }
   }
@@ -363,6 +412,8 @@ export function InvoiceForm({
     { value: "printable_and_bill", label: "Printable + Dashboard Bill" },
     { value: "bill_only", label: "Bill only" },
   ];
+
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -612,13 +663,15 @@ export function InvoiceForm({
 
       <div className="sticky bottom-3 z-10 rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-lg backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-          <Button type="button" className="w-full sm:w-auto" onClick={() => void submitForm("save")} disabled={createMutation.isPending}>
-            {createMutation.isPending ? "Saving..." : "Save Invoice"}
+          <Button type="button" className="w-full sm:w-auto" onClick={() => void submitForm("save")} disabled={isPending}>
+            {isPending ? "Saving..." : isEditMode ? "Save Changes" : "Save Invoice"}
           </Button>
-          <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => void submitForm("save_and_view")} disabled={createMutation.isPending}>
-            <Printer className="mr-2 h-4 w-4" />
-            {createMutation.isPending ? "Saving..." : "Save & View"}
-          </Button>
+          {!isEditMode ? (
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => void submitForm("save_and_view")} disabled={isPending}>
+              <Printer className="mr-2 h-4 w-4" />
+              {isPending ? "Saving..." : "Save & View"}
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

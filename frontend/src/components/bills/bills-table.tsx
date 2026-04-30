@@ -1,9 +1,11 @@
+// src/components/bills/bills-table.tsx
 import { memo } from "react";
 import { Edit3, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableWrapper, TBody, TD, TH, THead } from "@/components/ui/table";
 import { BillStatusBadge } from "@/components/common/status-badge";
 import { DataTablePagination } from "@/components/common/data-table-pagination";
+import { EmptyState } from "@/components/ui/empty-state";
 import { formatCurrency, formatDate, overdueSeverity } from "@/lib/utils";
 import { AssignAgentSelect } from "@/components/bills/assign-agent-select";
 import type { Invoice, User } from "@/types";
@@ -172,54 +174,67 @@ export function BillsTable({
   onEdit: (bill: Invoice) => void;
   onDelete: (bill: Invoice) => void;
 }) {
+  const hasRows = data.length > 0;
+
   return (
     <div className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-sm">
-      <div className="space-y-3 p-3.5 lg:hidden">
-        {data.map((bill) => (
-          <MobileBillCard
-            key={bill.id}
-            bill={bill}
-            users={users}
-            onEdit={onEdit}
-            onDelete={onDelete}
+      {!hasRows ? (
+        <div className="p-4">
+          <EmptyState
+            title="No bills found"
+            description="No invoice bills match the current filters."
           />
-        ))}
-      </div>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-3 p-3.5 lg:hidden">
+            {data.map((bill) => (
+              <MobileBillCard
+                key={bill.id}
+                bill={bill}
+                users={users}
+                onEdit={onEdit}
+                onDelete={onDelete}
+              />
+            ))}
+          </div>
 
-      <div className="hidden lg:block">
-        <TableWrapper className="rounded-none border-0 shadow-none">
-          <Table className="min-w-[1200px]">
-            <THead>
-              <tr>
-                <TH>Bill ID</TH>
-                <TH>Invoice Number</TH>
-                <TH>Invoice Date</TH>
-                <TH>Route Name</TH>
-                <TH>Outlet Name</TH>
-                <TH>Brand</TH>
-                <TH>Total Amount</TH>
-                <TH>Remaining Amount</TH>
-                <TH>Overdue Days</TH>
-                <TH>Created On</TH>
-                <TH>Assigned To</TH>
-                <TH>Status</TH>
-                <TH className="text-right">Actions</TH>
-              </tr>
-            </THead>
-            <TBody>
-              {data.map((bill) => (
-                <DesktopBillRow
-                  key={bill.id}
-                  bill={bill}
-                  users={users}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                />
-              ))}
-            </TBody>
-          </Table>
-        </TableWrapper>
-      </div>
+          <div className="hidden lg:block">
+            <TableWrapper className="rounded-none border-0 shadow-none">
+              <Table className="min-w-[1200px]">
+                <THead>
+                  <tr>
+                    <TH>Bill ID</TH>
+                    <TH>Invoice Number</TH>
+                    <TH>Invoice Date</TH>
+                    <TH>Route Name</TH>
+                    <TH>Outlet Name</TH>
+                    <TH>Brand</TH>
+                    <TH>Total Amount</TH>
+                    <TH>Remaining Amount</TH>
+                    <TH>Overdue Days</TH>
+                    <TH>Created On</TH>
+                    <TH>Assigned To</TH>
+                    <TH>Status</TH>
+                    <TH className="text-right">Actions</TH>
+                  </tr>
+                </THead>
+                <TBody>
+                  {data.map((bill) => (
+                    <DesktopBillRow
+                      key={bill.id}
+                      bill={bill}
+                      users={users}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                    />
+                  ))}
+                </TBody>
+              </Table>
+            </TableWrapper>
+          </div>
+        </>
+      )}
 
       <DataTablePagination page={page} pageSize={pageSize} total={total} onPageChange={onPageChange} />
     </div>

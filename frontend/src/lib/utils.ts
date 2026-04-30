@@ -1,6 +1,8 @@
+// src/lib/utils.ts
 import { clsx, type ClassValue } from "clsx";
 import { format, isValid } from "date-fns";
 import { twMerge } from "tailwind-merge";
+import type { Payment } from "@/types";
 
 export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
@@ -90,4 +92,36 @@ export function fallbackBillsExportFileName(params?: {
     return `bills_until_${params.end_date}.xlsx`;
   }
   return "bills_export.xlsx";
+}
+
+export function isChequeLikePayment(payment: Payment): boolean {
+  return payment.payment_method === "cheque" || payment.payment_method === "electronic";
+}
+
+export function isDirectPayment(payment: Payment): boolean {
+  return payment.payment_method === "cash" || payment.payment_method === "upi";
+}
+
+export function getPaymentReferenceLabel(payment: Payment): string {
+  if (payment.payment_method === "upi" || payment.payment_method === "electronic") {
+    return "Transaction No.";
+  }
+
+  if (payment.payment_method === "cheque") {
+    return "Cheque No.";
+  }
+
+  return "Reference";
+}
+
+export function getPaymentReferenceValue(payment: Payment): string {
+  if (payment.payment_method === "upi" || payment.payment_method === "electronic") {
+    return payment.transaction_number || "—";
+  }
+
+  if (payment.payment_method === "cheque") {
+    return payment.cheque_number || "—";
+  }
+
+  return "—";
 }

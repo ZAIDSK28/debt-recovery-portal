@@ -201,6 +201,7 @@ def import_bills_from_excel(file, job: BillImportJob | None = None) -> dict:
 
     errors: list[dict] = []
     imported = 0
+    processed_rows = 0
     seen_invoice_numbers: set[str] = set()
 
     for column in required_columns:
@@ -279,10 +280,11 @@ def import_bills_from_excel(file, job: BillImportJob | None = None) -> dict:
             )
             errors.append({"row": row_number, "message": message})
         finally:
+            processed_rows += 1
             if job:
                 _update_job(
                     job,
-                    processed_rows=job.processed_rows + 1,
+                    processed_rows=processed_rows,
                     imported=imported,
                     errors=errors,
                     error_count=len(errors),
@@ -298,7 +300,7 @@ def import_bills_from_excel(file, job: BillImportJob | None = None) -> dict:
             imported=imported,
             errors=errors,
             error_count=len(errors),
-            processed_rows=job.total_rows,
+            processed_rows=processed_rows,
         )
 
     return result

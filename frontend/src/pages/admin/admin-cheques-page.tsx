@@ -132,13 +132,14 @@ export default function AdminChequesPage() {
         ) : (
           <div className="w-full">
             <PaymentsTable
-              data={rows}
-              total={query.data?.count ?? 0}
-              page={page}
-              pageSize={pageSize}
-              onPageChange={setPage}
-              editableStatus
-            />
+            data={rows}
+            total={query.data?.count ?? 0}
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            showChequeColumns={false}
+            showStatusColumn={false}
+          />
           </div>
         )}
       </div>

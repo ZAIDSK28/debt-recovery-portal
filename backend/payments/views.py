@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import logging
+
 from datetime import timedelta
 
 import pandas as pd
@@ -12,7 +13,7 @@ from django.db.models.functions import Coalesce, TruncDate
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import generics, views
+from rest_framework import generics, serializers, views
 from rest_framework.response import Response
 
 from bills.models import Bill
@@ -36,6 +37,41 @@ def format_export_datetime(value):
     if timezone.is_aware(value):
         value = timezone.localtime(value)
     return value.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def parse_optional_date(value, field_name):
+    if not value:
+        return None
+    try:
+        return timezone.datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        raise serializers.ValidationError({field_name: "Date must be in YYYY-MM-DD format."})
+
+
+def apply_payment_filters(queryset, request):
+    payment_method = request.query_params.get("payment_method")
+    payment_method_in = request.query_params.get("payment_method_in")
+    start_date = parse_optional_date(request.query_params.get("start_date"), "start_date")
+    end_date = parse_optional_date(request.query_params.get("end_date"), "end_date")
+
+    if start_date and end_date and start_date > end_date:
+        raise serializers.ValidationError({"end_date": "end_date must be greater than or equal to start_date."})
+
+    if payment_method:
+        queryset = queryset.filter(payment_method=payment_method)
+
+    if payment_method_in:
+        methods = [item.strip() for item in payment_method_in.split(",") if item.strip()]
+        if methods:
+            queryset = queryset.filter(payment_method__in=methods)
+
+    if start_date:
+        queryset = queryset.filter(created_at__date__gte=start_date)
+
+    if end_date:
+        queryset = queryset.filter(created_at__date__lte=end_date)
+
+    return queryset
 
 
 class RecordPaymentView(generics.CreateAPIView):
@@ -77,27 +113,8 @@ class AllPaymentsView(generics.ListAPIView):
     search_fields = ["bill__invoice_number", "dra_username", "transaction_number", "cheque_number"]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        payment_method = self.request.query_params.get("payment_method")
-        payment_method_in = self.request.query_params.get("payment_method_in")
-        start_date = self.request.query_params.get("start_date")
-        end_date = self.request.query_params.get("end_date")
-
-        if payment_method:
-            queryset = queryset.filter(payment_method=payment_method)
-
-        if payment_method_in:
-            methods = [item.strip() for item in payment_method_in.split(",") if item.strip()]
-            if methods:
-                queryset = queryset.filter(payment_method__in=methods)
-
-        if start_date:
-            queryset = queryset.filter(created_at__date__gte=start_date)
-
-        if end_date:
-            queryset = queryset.filter(created_at__date__lte=end_date)
-
-        return queryset
+        queryset = super().get_queryset().select_related("bill")
+        return apply_payment_filters(queryset, self.request)
 
 
 class PaymentUpdateView(generics.UpdateAPIView):
@@ -213,24 +230,7 @@ class ExportPaymentsView(views.APIView):
 
     def get(self, request, *args, **kwargs):
         queryset = Payment.objects.select_related("bill").all()
-        payment_method = request.query_params.get("payment_method")
-        payment_method_in = self.request.query_params.get("payment_method_in")
-        start_date = request.query_params.get("start_date")
-        end_date = request.query_params.get("end_date")
-
-        if payment_method:
-            queryset = queryset.filter(payment_method=payment_method)
-
-        if payment_method_in:
-            methods = [item.strip() for item in payment_method_in.split(",") if item.strip()]
-            if methods:
-                queryset = queryset.filter(payment_method__in=methods)
-
-        if start_date:
-            queryset = queryset.filter(created_at__date__gte=start_date)
-
-        if end_date:
-            queryset = queryset.filter(created_at__date__lte=end_date)
+        queryset = apply_payment_filters(queryset, request)
 
         rows = []
         for payment in queryset:

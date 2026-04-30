@@ -37,6 +37,18 @@ export async function getInvoiceReportByIdApi(id: number): Promise<InvoiceReport
   return data;
 }
 
+export async function updateInvoiceReportApi(
+  id: number,
+  payload: Partial<CreateInvoiceReportPayload>
+): Promise<InvoiceReport> {
+  const { data } = await axiosInstance.patch<InvoiceReport>(`/reports/invoices/${id}/`, payload);
+  return data;
+}
+
+export async function deleteInvoiceReportApi(id: number): Promise<void> {
+  await axiosInstance.delete(`/reports/invoices/${id}/`);
+}
+
 export async function getPrintableInvoiceHtmlApi(id: number): Promise<string> {
   const { data } = await axiosInstance.get<string>(`/reports/invoices/${id}/print/`, {
     responseType: "text",

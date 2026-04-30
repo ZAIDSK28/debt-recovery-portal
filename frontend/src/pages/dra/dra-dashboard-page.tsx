@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+// src/pages/dra/dra-dashboard-page.tsx
+import { useCallback, useMemo, useState } from "react";
 import { BadgeIndianRupee, FileText } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/page-header";
@@ -50,6 +51,28 @@ export default function DRADashboardPage() {
     };
   }, [query.data?.count, bills]);
 
+  const openPaymentModal = useCallback((bill: Invoice) => {
+    setSelectedBill(bill);
+    setIsPaymentOpen(true);
+  }, []);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setPage(1);
+    setSearch(value);
+  }, []);
+
+  const handleModeChange = useCallback((value: "invoice_number" | "route_name" | "outlet_name") => {
+    setPage(1);
+    setMode(value);
+  }, []);
+
+  const handlePaymentOpenChange = useCallback((open: boolean) => {
+    setIsPaymentOpen(open);
+    if (!open) {
+      setSelectedBill(null);
+    }
+  }, []);
+
   return (
     <AppShell title="DRA Dashboard">
       <div className="space-y-5">
@@ -77,18 +100,12 @@ export default function DRADashboardPage() {
           <SearchInput
             placeholder="Search assigned bills..."
             value={search}
-            onChange={(event) => {
-              setPage(1);
-              setSearch(event.target.value);
-            }}
+            onChange={(event) => handleSearchChange(event.target.value)}
           />
 
           <Select
             value={mode}
-            onValueChange={(value) => {
-              setPage(1);
-              setMode(value as typeof mode);
-            }}
+            onValueChange={(value) => handleModeChange(value as typeof mode)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Search mode" />
@@ -165,10 +182,7 @@ export default function DRADashboardPage() {
                       <Button
                         className="w-full sm:w-auto"
                         size="sm"
-                        onClick={() => {
-                          setSelectedBill(bill);
-                          setIsPaymentOpen(true);
-                        }}
+                        onClick={() => openPaymentModal(bill)}
                       >
                         Record Payment
                       </Button>
@@ -218,10 +232,7 @@ export default function DRADashboardPage() {
                             <div className="flex justify-end">
                               <Button
                                 size="sm"
-                                onClick={() => {
-                                  setSelectedBill(bill);
-                                  setIsPaymentOpen(true);
-                                }}
+                                onClick={() => openPaymentModal(bill)}
                               >
                                 Record Payment
                               </Button>
@@ -247,12 +258,7 @@ export default function DRADashboardPage() {
 
       <PaymentFormModal
         open={isPaymentOpen}
-        onOpenChange={(open) => {
-          setIsPaymentOpen(open);
-          if (!open) {
-            setSelectedBill(null);
-          }
-        }}
+        onOpenChange={handlePaymentOpenChange}
         bill={selectedBill}
         onBillCleared={() => {
           // intentionally no tile update since KPI removed

@@ -133,12 +133,14 @@ export default function AdminPaymentsPage() {
           />
         ) : (
           <div className="w-full">
-            <PaymentsTable
+           <PaymentsTable
               data={rows}
               total={query.data?.count ?? 0}
               page={page}
               pageSize={pageSize}
               onPageChange={setPage}
+              showChequeColumns={false}
+              showStatusColumn={false}
             />
           </div>
         )}

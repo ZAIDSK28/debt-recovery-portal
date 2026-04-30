@@ -31,11 +31,13 @@ class BillSerializer(serializers.ModelSerializer):
     route_name = serializers.CharField(source="outlet.route.name", read_only=True)
     assigned_to_id = serializers.IntegerField(source="assigned_to.id", read_only=True)
     assigned_to_name = serializers.CharField(source="assigned_to.full_name", read_only=True)
+    invoice_id = serializers.IntegerField(source="invoice.id", read_only=True)
 
     class Meta:
         model = Bill
         fields = [
             "id",
+            "invoice_id",
             "invoice_number",
             "invoice_date",
             "outlet",
@@ -51,6 +53,7 @@ class BillSerializer(serializers.ModelSerializer):
             "assigned_to_name",
             "created_at",
             "cleared_at",
+            "cancelled_at",
         ]
 
     def validate(self, attrs):

@@ -22,13 +22,22 @@ class PaymentSerializer(serializers.ModelSerializer):
             "payment_method",
             "amount",
             "transaction_number",
+            "firm",
+            "created_at",
             "cheque_number",
             "cheque_date",
             "cheque_type",
             "cheque_status",
-            "firm",
-            "created_at",
         ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.payment_method not in [Payment.PaymentMethod.CHEQUE, Payment.PaymentMethod.ELECTRONIC]:
+            data.pop("cheque_number", None)
+            data.pop("cheque_date", None)
+            data.pop("cheque_type", None)
+            data.pop("cheque_status", None)
+        return data
 
 
 class PaymentCreateSerializer(serializers.ModelSerializer):
@@ -58,7 +67,7 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
         if amount > bill.remaining_amount:
             raise serializers.ValidationError({"amount": "Amount cannot exceed remaining amount."})
 
-        if method in [Payment.PaymentMethod.UPI]:
+        if method == Payment.PaymentMethod.UPI:
             if not attrs.get("transaction_number"):
                 raise serializers.ValidationError({"transaction_number": "Transaction number is required."})
 
@@ -78,6 +87,13 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
 
             if not attrs.get("cheque_status"):
                 attrs["cheque_status"] = Payment.ChequeStatus.PENDING
+        else:
+            attrs["cheque_number"] = ""
+            attrs["cheque_date"] = None
+            attrs["cheque_type"] = ""
+            attrs["cheque_status"] = ""
+            if method == Payment.PaymentMethod.CASH:
+                attrs["transaction_number"] = attrs.get("transaction_number", "") or ""
 
         return attrs
 
