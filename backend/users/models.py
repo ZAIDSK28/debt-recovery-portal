@@ -1,3 +1,5 @@
+# users/models.py
+
 from __future__ import annotations
 
 from datetime import timedelta
@@ -34,6 +36,9 @@ class AdminOTP(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "used", "expires_at"]),
+        ]
 
     def is_valid(self) -> bool:
         return not self.used and timezone.now() <= self.expires_at

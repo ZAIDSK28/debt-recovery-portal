@@ -2,6 +2,65 @@
 
 from django.conf import settings
 from django.db import models
+import random
+import string
+
+
+class Party(models.Model):
+    name = models.CharField(max_length=255)
+    address = models.TextField(blank=True)
+    phone = models.CharField(max_length=50, blank=True)
+    email = models.EmailField(blank=True)
+    gst_number = models.CharField(max_length=100, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name", "id"]
+
+    def __str__(self):
+        return self.name
+
+
+class InvoiceSequenceSetting(models.Model):
+    name = models.CharField(max_length=100, default="default", unique=True)
+    prefix = models.CharField(max_length=50, default="INV")
+    date_format = models.CharField(max_length=50, default="%Y%m")
+    separator = models.CharField(max_length=10, default="-")
+    next_number = models.PositiveIntegerField(default=1)
+    padding = models.PositiveIntegerField(default=4)
+    is_active = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def get_active(cls):
+        obj, _ = cls.objects.get_or_create(
+            name="default",
+            defaults={
+                "prefix": "INV",
+                "date_format": "%Y%m",
+                "separator": "-",
+                "next_number": 1,
+                "padding": 4,
+                "is_active": True,
+            },
+        )
+        return obj
+
+    def _random_suffix(self, length: int = 6) -> str:
+        alphabet = string.ascii_uppercase + string.digits
+        return "".join(random.choices(alphabet, k=length))
+
+    def generate_invoice_number(self):
+        random_part = self._random_suffix(6)
+        parts = [part for part in [self.prefix, random_part] if part]
+        return self.separator.join(parts)
 
 
 class PrintableInvoice(models.Model):
@@ -17,6 +76,14 @@ class PrintableInvoice(models.Model):
 
     invoice_number = models.CharField(max_length=100, unique=True)
     invoice_date = models.DateField()
+
+    party = models.ForeignKey(
+        "reports.Party",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="invoices",
+    )
 
     customer_name = models.CharField(max_length=255)
     customer_address = models.TextField(blank=True)

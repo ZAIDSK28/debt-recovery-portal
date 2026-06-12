@@ -1,4 +1,5 @@
 // src/hooks/queryKeys.ts
+
 export const queryKeys = {
   bills: (params?: unknown) => ["bills", params] as const,
   myAssignments: (params?: unknown) => ["my-assignments", params] as const,
@@ -15,4 +16,9 @@ export const queryKeys = {
   invoiceReportDetail: (id: number) => ["invoice-report", id] as const,
   products: (params?: unknown) => ["products", params] as const,
   productDetail: (id: number) => ["product", id] as const,
+  stockItems: (params?: unknown) => ["stock-items", params] as const,
+  stockMovements: (params?: unknown) => ["stock-movements", params] as const,
+  stockMovementDetail: (id: number) => ["stock-movement", id] as const,
+  stockTransfers: (params?: unknown) => ["stock-transfers", params] as const,
+  lowStockItems: ["stock-items", "low-stock"] as const,
 };

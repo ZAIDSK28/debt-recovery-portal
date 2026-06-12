@@ -84,6 +84,9 @@ class VerifyOTPView(generics.GenericAPIView):
         except User.DoesNotExist:
             return Response({"detail": "Invalid user."}, status=status.HTTP_400_BAD_REQUEST)
 
+        if not user.is_active:
+            return Response({"detail": "User account is inactive."}, status=status.HTTP_400_BAD_REQUEST)
+
         otp = (
             AdminOTP.objects.filter(user=user, code=otp_code, used=False, expires_at__gte=timezone.now())
             .order_by("-created_at")
@@ -127,6 +130,9 @@ class ResendOTPView(generics.GenericAPIView):
         except User.DoesNotExist:
             return Response({"detail": "Invalid user."}, status=status.HTTP_400_BAD_REQUEST)
 
+        if not user.is_active:
+            return Response({"detail": "User account is inactive."}, status=status.HTTP_400_BAD_REQUEST)
+
         create_and_send_admin_otp(user)
         create_audit_log(
             actor=user,
@@ -136,7 +142,6 @@ class ResendOTPView(generics.GenericAPIView):
             metadata={"username": user.username},
         )
         return Response({"detail": "OTP sent."}, status=status.HTTP_200_OK)
-
 
 class UserListView(generics.ListCreateAPIView):
     permission_classes = [IsAdmin]

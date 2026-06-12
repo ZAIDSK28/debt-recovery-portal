@@ -1,3 +1,5 @@
+# payments/models.py
+
 from __future__ import annotations
 
 from django.db import models
@@ -42,3 +44,10 @@ class Payment(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["payment_method"]),
+            models.Index(fields=["cheque_status"]),
+            models.Index(fields=["payment_method", "cheque_status", "created_at"]),
+            models.Index(fields=["bill", "payment_method", "cheque_status"]),
+        ]

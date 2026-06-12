@@ -10,12 +10,13 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, views
 from rest_framework.response import Response
-from weasyprint import HTML
 
 from core.permissions import IsAdmin
 from core.utils import create_audit_log
-from reports.models import PrintableInvoice
+from reports.models import InvoiceSequenceSetting, Party, PrintableInvoice
 from reports.serializers import (
+    InvoiceSequenceSettingSerializer,
+    PartySerializer,
     PrintableInvoiceCreateSerializer,
     PrintableInvoiceDetailSerializer,
     PrintableInvoiceListSerializer,
@@ -58,7 +59,7 @@ def build_invoice_html(invoice):
             <tr>
               <td class="item-col">
                 <div class="item-name">{escape(str(item.description or ""))}</div>
-                <div class="item-sub">Product item</div>
+                <div class="item-sub">{escape(str(item.product.name if item.product else "Product item"))}</div>
               </td>
               <td class="qty-col">{escape(str(item.quantity))}</td>
               <td class="price-col">{_fmt_money(item.rate)}</td>
@@ -88,248 +89,45 @@ def build_invoice_html(invoice):
   <meta charset="UTF-8" />
   <title>Invoice {escape(str(invoice.invoice_number))}</title>
   <style>
-    @page {{
-      size: A4;
-      margin: 24mm 18mm 20mm 18mm;
-    }}
-
-    body {{
-      font-family: Arial, Helvetica, sans-serif;
-      color: #222;
-      font-size: 14px;
-      line-height: 1.4;
-      margin: 0;
-      padding: 0;
-      background: #fff;
-    }}
-
-    .invoice-wrapper {{
-      width: 100%;
-    }}
-
-    .top-header {{
-      display: table;
-      width: 100%;
-      margin-bottom: 28px;
-    }}
-
-    .top-left,
-    .top-right {{
-      display: table-cell;
-      vertical-align: top;
-      width: 50%;
-    }}
-
-    .brand-block {{
-      display: table;
-    }}
-
-    .logo-box {{
-      width: 72px;
-      height: 72px;
-      background: #5f6f82;
-      border-radius: 14px;
-      display: table-cell;
-      vertical-align: middle;
-      text-align: center;
-      color: #fff;
-      font-size: 30px;
-      font-weight: bold;
-    }}
-
-    .brand-text {{
-      display: table-cell;
-      vertical-align: top;
-      padding-left: 16px;
-    }}
-
-    .brand-name {{
-      font-size: 28px;
-      font-weight: 700;
-      margin: 0 0 8px 0;
-      color: #1d1d1f;
-    }}
-
-    .brand-address {{
-      margin: 0;
-      color: #444;
-      white-space: pre-line;
-    }}
-
-    .top-right {{
-      text-align: right;
-    }}
-
-    .invoice-meta {{
-      font-size: 14px;
-      color: #222;
-      line-height: 1.7;
-    }}
-
-    .invoice-meta strong {{
-      display: inline-block;
-      min-width: 100px;
-    }}
-
-    .thick-rule {{
-      height: 8px;
-      background: #5f6f82;
-      margin: 12px 0 42px;
-    }}
-
-    .hero-title {{
-      font-size: 34px;
-      font-weight: 700;
-      margin: 0 0 8px 0;
-      color: #1d1d1f;
-    }}
-
-    .hero-text {{
-      margin: 0 0 54px 0;
-      font-size: 16px;
-      color: #333;
-    }}
-
-    .info-grid {{
-      display: table;
-      width: 100%;
-      table-layout: fixed;
-      margin-bottom: 26px;
-    }}
-
-    .info-col {{
-      display: table-cell;
-      vertical-align: top;
-      width: 33.33%;
-      padding-right: 22px;
-    }}
-
-    .info-col:last-child {{
-      padding-right: 0;
-    }}
-
-    .info-rule {{
-      border-top: 1px solid #d8d8d8;
-      margin-bottom: 18px;
-    }}
-
-    .section-label {{
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 1.6px;
-      color: #111;
-      margin-bottom: 10px;
-    }}
-
-    .section-content {{
-      color: #222;
-      font-size: 15px;
-      white-space: pre-line;
-    }}
-
-    table.items-table {{
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }}
-
-    .items-table thead th {{
-      text-align: left;
-      font-size: 12px;
-      letter-spacing: 1.6px;
-      color: #111;
-      padding: 12px 0;
-      border-top: 1px solid #d8d8d8;
-      border-bottom: 1px solid #d8d8d8;
-    }}
-
-    .items-table td {{
-      padding: 18px 0;
-      border-bottom: 1px solid #e2e2e2;
-      vertical-align: top;
-      font-size: 15px;
-    }}
-
-    .item-col {{
-      width: 58%;
-    }}
-
-    .qty-col,
-    .price-col,
-    .amount-col {{
-      width: 14%;
-      text-align: right;
-    }}
-
-    .item-name {{
-      font-size: 15px;
-      color: #222;
-      margin-bottom: 4px;
-    }}
-
-    .item-sub {{
-      color: #9a9a9a;
-      font-size: 13px;
-    }}
-
-    .totals {{
-      width: 100%;
-      margin-top: 26px;
-      border-top: 1px solid #d8d8d8;
-      padding-top: 18px;
-    }}
-
-    .totals-table {{
-      width: 100%;
-      border-collapse: collapse;
-    }}
-
-    .totals-table td {{
-      padding: 6px 0;
-      font-size: 15px;
-    }}
-
-    .totals-table .label {{
-      text-align: left;
-      color: #222;
-    }}
-
-    .totals-table .value {{
-      text-align: right;
-      color: #222;
-      width: 180px;
-    }}
-
-    .grand-total-row td {{
-      padding-top: 16px;
-      font-size: 18px;
-      font-weight: 700;
-      border-top: 1px solid #d8d8d8;
-    }}
-
-    .bottom-rule {{
-      border-top: 1px solid #d8d8d8;
-      margin-top: 14px;
-    }}
-
-    .footer {{
-      margin-top: 120px;
-      display: table;
-      width: 100%;
-      color: #444;
-      font-size: 12px;
-    }}
-
-    .footer-left,
-    .footer-right {{
-      display: table-cell;
-      vertical-align: bottom;
-      width: 50%;
-    }}
-
-    .footer-right {{
-      text-align: right;
-    }}
+    @page {{ size: A4; margin: 24mm 18mm 20mm 18mm; }}
+    body {{ font-family: Arial, Helvetica, sans-serif; color: #222; font-size: 14px; line-height: 1.4; margin: 0; padding: 0; background: #fff; }}
+    .invoice-wrapper {{ width: 100%; }}
+    .top-header {{ display: table; width: 100%; margin-bottom: 28px; }}
+    .top-left, .top-right {{ display: table-cell; vertical-align: top; width: 50%; }}
+    .brand-block {{ display: table; }}
+    .logo-box {{ width: 72px; height: 72px; background: #5f6f82; border-radius: 14px; display: table-cell; vertical-align: middle; text-align: center; color: #fff; font-size: 30px; font-weight: bold; }}
+    .brand-text {{ display: table-cell; vertical-align: top; padding-left: 16px; }}
+    .brand-name {{ font-size: 28px; font-weight: 700; margin: 0 0 8px 0; color: #1d1d1f; }}
+    .brand-address {{ margin: 0; color: #444; white-space: pre-line; }}
+    .top-right {{ text-align: right; }}
+    .invoice-meta {{ font-size: 14px; color: #222; line-height: 1.7; }}
+    .invoice-meta strong {{ display: inline-block; min-width: 100px; }}
+    .thick-rule {{ height: 8px; background: #5f6f82; margin: 12px 0 42px; }}
+    .hero-title {{ font-size: 34px; font-weight: 700; margin: 0 0 8px 0; color: #1d1d1f; }}
+    .hero-text {{ margin: 0 0 54px 0; font-size: 16px; color: #333; }}
+    .info-grid {{ display: table; width: 100%; table-layout: fixed; margin-bottom: 26px; }}
+    .info-col {{ display: table-cell; vertical-align: top; width: 33.33%; padding-right: 22px; }}
+    .info-col:last-child {{ padding-right: 0; }}
+    .info-rule {{ border-top: 1px solid #d8d8d8; margin-bottom: 18px; }}
+    .section-label {{ font-size: 12px; font-weight: 700; letter-spacing: 1.6px; color: #111; margin-bottom: 10px; }}
+    .section-content {{ color: #222; font-size: 15px; white-space: pre-line; }}
+    table.items-table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+    .items-table thead th {{ text-align: left; font-size: 12px; letter-spacing: 1.6px; color: #111; padding: 12px 0; border-top: 1px solid #d8d8d8; border-bottom: 1px solid #d8d8d8; }}
+    .items-table td {{ padding: 18px 0; border-bottom: 1px solid #e2e2e2; vertical-align: top; font-size: 15px; }}
+    .item-col {{ width: 58%; }}
+    .qty-col, .price-col, .amount-col {{ width: 14%; text-align: right; }}
+    .item-name {{ font-size: 15px; color: #222; margin-bottom: 4px; }}
+    .item-sub {{ color: #9a9a9a; font-size: 13px; }}
+    .totals {{ width: 100%; margin-top: 26px; border-top: 1px solid #d8d8d8; padding-top: 18px; }}
+    .totals-table {{ width: 100%; border-collapse: collapse; }}
+    .totals-table td {{ padding: 6px 0; font-size: 15px; }}
+    .totals-table .label {{ text-align: left; color: #222; }}
+    .totals-table .value {{ text-align: right; color: #222; width: 180px; }}
+    .grand-total-row td {{ padding-top: 16px; font-size: 18px; font-weight: 700; border-top: 1px solid #d8d8d8; }}
+    .bottom-rule {{ border-top: 1px solid #d8d8d8; margin-top: 14px; }}
+    .footer {{ margin-top: 120px; display: table; width: 100%; color: #444; font-size: 12px; }}
+    .footer-left, .footer-right {{ display: table-cell; vertical-align: bottom; width: 50%; }}
+    .footer-right {{ text-align: right; }}
   </style>
 </head>
 <body>
@@ -396,42 +194,48 @@ India</p>
 
     <div class="totals">
       <table class="totals-table">
-        <tr>
-          <td class="label">Subtotal</td>
-          <td class="value">{_fmt_money(invoice.subtotal)}</td>
-        </tr>
-        <tr>
-          <td class="label">Tax</td>
-          <td class="value">{_fmt_money(invoice.tax_amount)}</td>
-        </tr>
-        <tr>
-          <td class="label">Discount</td>
-          <td class="value">{_fmt_money(invoice.discount_amount)}</td>
-        </tr>
-        <tr class="grand-total-row">
-          <td class="label">Total Due</td>
-          <td class="value">{_fmt_money(invoice.total_amount)}</td>
-        </tr>
+        <tr><td class="label">Subtotal</td><td class="value">{_fmt_money(invoice.subtotal)}</td></tr>
+        <tr><td class="label">Tax</td><td class="value">{_fmt_money(invoice.tax_amount)}</td></tr>
+        <tr><td class="label">Discount</td><td class="value">{_fmt_money(invoice.discount_amount)}</td></tr>
+        <tr class="grand-total-row"><td class="label">Total Due</td><td class="value">{_fmt_money(invoice.total_amount)}</td></tr>
       </table>
       <div class="bottom-rule"></div>
     </div>
 
     <div class="footer">
-      <div class="footer-left">
-        Thank you for your business.
-      </div>
-      <div class="footer-right">
-        Page 1
-      </div>
+      <div class="footer-left">Thank you for your business.</div>
+      <div class="footer-right">Page 1</div>
     </div>
   </div>
 </body>
 </html>"""
 
 
+class PartyListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsAdmin]
+    serializer_class = PartySerializer
+    queryset = Party.objects.all()
+    ordering_fields = ["id", "name", "created_at"]
+    search_fields = ["name", "phone", "email", "gst_number"]
+
+
+class PartyRetrieveUpdateView(generics.RetrieveUpdateAPIView):
+    permission_classes = [IsAdmin]
+    serializer_class = PartySerializer
+    queryset = Party.objects.all()
+
+
+class InvoiceSequenceSettingView(generics.RetrieveUpdateAPIView):
+    permission_classes = [IsAdmin]
+    serializer_class = InvoiceSequenceSettingSerializer
+    queryset = InvoiceSequenceSetting.objects.all()
+
+    def get_object(self):
+        return InvoiceSequenceSetting.get_active()
+
 class PrintableInvoiceListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAdmin]
-    queryset = PrintableInvoice.objects.all().select_related("recovery_bill").prefetch_related("items__product")
+    queryset = PrintableInvoice.objects.all().select_related("recovery_bill", "party").prefetch_related("items__product")
     ordering_fields = ["created_at", "updated_at", "invoice_date", "invoice_number", "total_amount"]
     search_fields = ["invoice_number", "customer_name", "route_name", "outlet_name", "brand"]
 
@@ -454,6 +258,7 @@ class PrintableInvoiceListCreateView(generics.ListCreateAPIView):
                 "invoice_number": invoice.invoice_number,
                 "creation_mode": invoice.creation_mode,
                 "linked_bill_id": getattr(getattr(invoice, "recovery_bill", None), "id", None),
+                "party_id": invoice.party_id,
             },
         )
 
@@ -463,61 +268,19 @@ class PrintableInvoiceListCreateView(generics.ListCreateAPIView):
 
 class PrintableInvoiceRetrieveView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAdmin]
-    queryset = PrintableInvoice.objects.all().select_related("recovery_bill").prefetch_related("items__product")
+    queryset = PrintableInvoice.objects.all().select_related("recovery_bill", "party").prefetch_related("items__product")
 
     def get_serializer_class(self):
         if self.request.method in ["PATCH", "PUT"]:
             return PrintableInvoiceUpdateSerializer
         return PrintableInvoiceDetailSerializer
 
-    def update(self, request, *args, **kwargs):
-        partial = kwargs.pop("partial", request.method == "PATCH")
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        invoice = serializer.save()
-
-        create_audit_log(
-            actor=self.request.user,
-            action="printable_invoice.updated",
-            entity_type="printable_invoice",
-            entity_id=str(invoice.id),
-            metadata={
-                "invoice_number": invoice.invoice_number,
-                "linked_bill_id": getattr(getattr(invoice, "recovery_bill", None), "id", None),
-            },
-        )
-
-        response_serializer = PrintableInvoiceDetailSerializer(invoice)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
-
-    def perform_destroy(self, instance):
-        recovery_bill = getattr(instance, "recovery_bill", None)
-
-        create_audit_log(
-            actor=self.request.user,
-            action="printable_invoice.deleted",
-            entity_type="printable_invoice",
-            entity_id=str(instance.id),
-            metadata={
-                "invoice_number": instance.invoice_number,
-                "linked_bill_id": getattr(recovery_bill, "id", None),
-                "had_payments": bool(recovery_bill and recovery_bill.payments.exists()),
-            },
-        )
-
-        if recovery_bill:
-            recovery_bill.delete()
-
-        instance.delete()
-
-
 class PrintableInvoicePrintView(views.APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request, pk, *args, **kwargs):
         invoice = get_object_or_404(
-            PrintableInvoice.objects.prefetch_related("items__product"),
+            PrintableInvoice.objects.select_related("party").prefetch_related("items__product"),
             pk=pk,
         )
         html = build_invoice_html(invoice)
@@ -529,10 +292,12 @@ class PrintableInvoicePDFView(views.APIView):
 
     def get(self, request, pk, *args, **kwargs):
         invoice = get_object_or_404(
-            PrintableInvoice.objects.prefetch_related("items__product"),
+            PrintableInvoice.objects.select_related("party").prefetch_related("items__product"),
             pk=pk,
         )
         try:
+            from weasyprint import HTML
+
             html = build_invoice_html(invoice)
             pdf_bytes = HTML(string=html, base_url=request.build_absolute_uri("/")).write_pdf()
         except Exception as exc:

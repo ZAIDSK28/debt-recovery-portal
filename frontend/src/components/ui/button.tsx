@@ -1,33 +1,41 @@
+// src/components/ui/button.tsx
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-xl text-sm font-semibold transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 active:scale-[0.985]",
+  [
+    "inline-flex items-center justify-center font-semibold",
+    "transition-all duration-150 disabled:pointer-events-none disabled:opacity-40",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6F72BE]/30",
+    "active:scale-[0.97]",
+  ].join(" "),
   {
     variants: {
       variant: {
         default:
-          "bg-[linear-gradient(135deg,#7dd3fc,#38bdf8,#0ea5e9)] text-white shadow-[0_6px_18px_rgba(56,189,248,0.28)] hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(56,189,248,0.35)]",
+          "rounded-[10px] bg-[#6F72BE] text-white shadow-[0_1px_4px_rgba(111,114,190,0.25)] hover:bg-[#5D60A8]",
         outline:
-          "border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700",
+          "rounded-[8px] border border-[#DFE1F0] bg-white text-[#1E1E30] hover:border-[#6F72BE] hover:bg-[#EAEBF8] hover:text-[#6F72BE]",
         ghost:
-          "text-slate-600 hover:bg-slate-100 hover:text-slate-800",
+          "rounded-[8px] text-[#6B6B8A] hover:bg-[#EAEBF8] hover:text-[#6F72BE]",
         danger:
-          "bg-red-500 text-white shadow-sm hover:bg-red-600 hover:shadow-md",
+          "rounded-[10px] bg-[#E04E6A] text-white shadow-[0_1px_4px_rgba(224,78,106,0.25)] hover:bg-[#C9405A]",
       },
       size: {
-        default: "h-9 px-4 py-1.5",
-        sm: "h-8 px-3 text-[13px]",
-        lg: "h-10 px-5",
-        icon: "h-8.5 w-8.5",
+        default: "h-8 px-3.5 text-[13px]",
+        sm:      "h-7 px-2.5 text-[12px]",
+        xs:      "h-6 px-2   text-[11px]",
+        lg:      "h-9 px-5   text-[14px]",
+        icon:    "h-7 w-7",
+        "icon-xs": "h-6 w-6",
       },
     },
     defaultVariants: {
       variant: "default",
       size: "default",
     },
-  }
+  },
 );
 
 export interface ButtonProps
@@ -35,9 +43,14 @@ export interface ButtonProps
     VariantProps<typeof buttonVariants> {}
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, type = "button", ...props }, ref) => {
-    return <button ref={ref} type={type} className={cn(buttonVariants({ variant, size }), className)} {...props} />;
-  }
+  ({ className, variant, size, type = "button", ...props }, ref) => (
+    <button
+      ref={ref}
+      type={type}
+      className={cn(buttonVariants({ variant, size }), className)}
+      {...props}
+    />
+  ),
 );
 
 Button.displayName = "Button";

@@ -5,16 +5,15 @@ import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/page-header";
 import { KpiCard } from "@/components/common/kpi-card";
 import { SearchInput } from "@/components/common/search-input";
-import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Table, TableWrapper, TBody, TD, TH, THead } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DataTable, type DataTableColumn } from "@/components/common/data-table";
 import { PaymentFormModal } from "@/components/payments/payment-form-modal";
-import { DataTablePagination } from "@/components/common/data-table-pagination";
-import { ResponsiveTableSkeleton } from "@/components/common/loading-state";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useMyAssignments } from "@/hooks/useBills";
-import { formatCurrency, formatDate, overdueSeverity } from "@/lib/utils";
+import { cn, formatCurrency, formatDate, overdueSeverity } from "@/lib/utils";
 import type { Invoice } from "@/types";
 
 export default function DRADashboardPage() {
@@ -22,56 +21,89 @@ export default function DRADashboardPage() {
   const pageSize = 20;
   const [search, setSearch] = useState("");
   const [mode, setMode] = useState<"invoice_number" | "route_name" | "outlet_name">("invoice_number");
-  const debouncedSearch = useDebounce(search, 500);
-
+  const [ordering, setOrdering] = useState<string | undefined>("-invoice_date");
   const [selectedBill, setSelectedBill] = useState<Invoice | null>(null);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const debouncedSearch = useDebounce(search, 400);
 
   const assignmentParams = useMemo(
-    () => ({
-      page,
-      page_size: pageSize,
-      search: debouncedSearch,
-      mode,
-      ordering: "-invoice_date",
-    }),
-    [page, pageSize, debouncedSearch, mode]
+    () => ({ page, page_size: pageSize, search: debouncedSearch, mode, ordering }),
+    [page, pageSize, debouncedSearch, mode, ordering],
   );
 
   const query = useMyAssignments(assignmentParams);
   const bills = query.data?.results ?? [];
 
-  const metrics = useMemo(() => {
-    const totalBills = query.data?.count ?? 0;
-    const outstandingAmount = bills.reduce((sum, bill) => sum + Number(bill.remaining_amount), 0);
+  const totalOutstanding = useMemo(
+    () => bills.reduce((s, b) => s + Number(b.remaining_amount), 0),
+    [bills],
+  );
 
-    return {
-      totalBills,
-      outstandingAmount,
-    };
-  }, [query.data?.count, bills]);
-
-  const openPaymentModal = useCallback((bill: Invoice) => {
+  const openPayment = useCallback((bill: Invoice) => {
     setSelectedBill(bill);
     setIsPaymentOpen(true);
   }, []);
 
-  const handleSearchChange = useCallback((value: string) => {
+  const handleSortChange = useCallback((ord: string | undefined) => {
+    setOrdering(ord);
     setPage(1);
-    setSearch(value);
   }, []);
 
-  const handleModeChange = useCallback((value: "invoice_number" | "route_name" | "outlet_name") => {
-    setPage(1);
-    setMode(value);
-  }, []);
+  const overdueCellClass = (days: number) => {
+    const s = overdueSeverity(days);
+    return s === "high" ? "text-[#E04E6A]" : s === "medium" ? "text-[#D97B0A]" : "text-[#1E1E30]";
+  };
 
-  const handlePaymentOpenChange = useCallback((open: boolean) => {
-    setIsPaymentOpen(open);
-    if (!open) {
-      setSelectedBill(null);
-    }
-  }, []);
+  const columns: DataTableColumn<Invoice>[] = [
+    {
+      key: "invoice_number",
+      header: "Invoice No.",
+      sortKey: "invoice_number",
+      render: (r) => <span className="font-medium text-[#1E1E30]">{r.invoice_number}</span>,
+    },
+    {
+      key: "invoice_date",
+      header: "Invoice Date",
+      sortKey: "invoice_date",
+      render: (r) => <span className="text-[12px] text-[#9898B4]">{formatDate(r.invoice_date)}</span>,
+    },
+    { key: "route_name", header: "Route", sortKey: "route_name" },
+    { key: "outlet_name", header: "Outlet", sortKey: "outlet_name" },
+    { key: "brand", header: "Brand" },
+    {
+      key: "actual_amount",
+      header: "Total",
+      sortKey: "actual_amount",
+      render: (r) => <span className="tabular-nums">{formatCurrency(r.actual_amount)}</span>,
+    },
+    {
+      key: "remaining_amount",
+      header: "Remaining",
+      sortKey: "remaining_amount",
+      render: (r) => <span className="font-semibold tabular-nums">{formatCurrency(r.remaining_amount)}</span>,
+    },
+    {
+      key: "overdue_days",
+      header: "Overdue",
+      sortKey: "overdue_days",
+      render: (r) => (
+        <span className={cn("font-semibold", overdueCellClass(r.overdue_days))}>
+          {r.overdue_days}d
+        </span>
+      ),
+    },
+    {
+      key: "action",
+      header: "Action",
+      headerClassName: "text-right",
+      cellClassName: "text-right",
+      render: (r) => (
+        <Button size="sm" onClick={() => openPayment(r)}>
+          Record Payment
+        </Button>
+      ),
+    },
+  ];
 
   return (
     <AppShell title="DRA Dashboard">
@@ -83,186 +115,111 @@ export default function DRADashboardPage() {
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <KpiCard
-            title="Total Bills Assigned"
-            value={String(metrics.totalBills)}
+            title="Bills Assigned"
+            value={String(query.data?.count ?? 0)}
             icon={FileText}
-            accentClassName="bg-sky-500"
+            accentClassName="bg-[#6F72BE]"
           />
           <KpiCard
-            title="Outstanding Amount"
-            value={formatCurrency(metrics.outstandingAmount)}
+            title="Outstanding"
+            value={formatCurrency(totalOutstanding)}
             icon={BadgeIndianRupee}
-            accentClassName="bg-amber-500"
+            accentClassName="bg-[#D97B0A]"
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-3 rounded-[18px] border border-slate-200 bg-white p-3.5 shadow-sm xl:grid-cols-[1fr_220px]">
-          <SearchInput
-            placeholder="Search assigned bills..."
-            value={search}
-            onChange={(event) => handleSearchChange(event.target.value)}
-          />
+        {/* Mobile cards */}
+        {!query.isLoading && bills.length > 0 ? (
+          <div className="space-y-3 lg:hidden">
+            {bills.map((bill) => {
+              const s = overdueSeverity(bill.overdue_days);
+              const cls = s === "high" ? "text-[#E04E6A]" : s === "medium" ? "text-[#D97B0A]" : "text-[#1E1E30]";
+              return (
+                <div key={bill.id} className="rounded-[18px] border border-[#DFE1F0] bg-white p-3.5 shadow-[0_2px_8px_rgba(30,30,48,0.06)]">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#9898B4]">Invoice</p>
+                  <p className="text-[15px] font-semibold text-[#1E1E30]">{bill.invoice_number}</p>
 
-          <Select
-            value={mode}
-            onValueChange={(value) => handleModeChange(value as typeof mode)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Search mode" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="invoice_number">Invoice Number</SelectItem>
-              <SelectItem value="route_name">Route Name</SelectItem>
-              <SelectItem value="outlet_name">Outlet Name</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {query.isLoading ? (
-          <ResponsiveTableSkeleton />
-        ) : bills.length === 0 ? (
-          <EmptyState
-            icon={<FileText className="h-6 w-6" />}
-            title="No assigned invoices"
-            description="There are currently no open invoices assigned to you."
-          />
-        ) : (
-          <>
-            <div className="space-y-3 lg:hidden">
-              {bills.map((bill) => {
-                const severity = overdueSeverity(bill.overdue_days);
-                const overdueClass =
-                  severity === "high"
-                    ? "text-red-600"
-                    : severity === "medium"
-                      ? "text-amber-600"
-                      : "text-slate-700";
-
-                return (
-                  <div key={bill.id} className="rounded-[18px] border border-slate-200 bg-white p-3.5 shadow-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">Invoice</p>
-                        <p className="text-[15px] font-semibold text-slate-900">{bill.invoice_number}</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2.5">
+                    {[
+                      ["Date", formatDate(bill.invoice_date)],
+                      ["Route", bill.route_name],
+                      ["Outlet", bill.outlet_name],
+                      ["Brand", bill.brand],
+                      ["Total", formatCurrency(bill.actual_amount)],
+                      ["Remaining", formatCurrency(bill.remaining_amount)],
+                    ].map(([lbl, val]) => (
+                      <div key={String(lbl)}>
+                        <p className="text-[11px] text-[#9898B4]">{lbl}</p>
+                        <p className="text-[13px] font-medium text-[#1E1E30]">{val}</p>
                       </div>
-                    </div>
-
-                    <div className="mt-3.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      <div>
-                        <p className="text-[11px] text-slate-500">Invoice Date</p>
-                        <p className="text-sm font-medium text-slate-900">{formatDate(bill.invoice_date)}</p>
-                      </div>
-                      <div>
-                        <p className="text-[11px] text-slate-500">Route</p>
-                        <p className="text-sm font-medium text-slate-900">{bill.route_name}</p>
-                      </div>
-                      <div>
-                        <p className="text-[11px] text-slate-500">Outlet</p>
-                        <p className="text-sm font-medium text-slate-900">{bill.outlet_name}</p>
-                      </div>
-                      <div>
-                        <p className="text-[11px] text-slate-500">Brand</p>
-                        <p className="text-sm font-medium text-slate-900">{bill.brand}</p>
-                      </div>
-                      <div>
-                        <p className="text-[11px] text-slate-500">Total Amount</p>
-                        <p className="text-sm font-medium text-slate-900">{formatCurrency(bill.actual_amount)}</p>
-                      </div>
-                      <div>
-                        <p className="text-[11px] text-slate-500">Remaining Amount</p>
-                        <p className="text-sm font-semibold text-slate-900">{formatCurrency(bill.remaining_amount)}</p>
-                      </div>
-                      <div>
-                        <p className="text-[11px] text-slate-500">Overdue Days</p>
-                        <p className={`text-sm font-semibold ${overdueClass}`}>{bill.overdue_days}</p>
-                      </div>
-                    </div>
-
-                    <div className="mt-3.5">
-                      <Button
-                        className="w-full sm:w-auto"
-                        size="sm"
-                        onClick={() => openPaymentModal(bill)}
-                      >
-                        Record Payment
-                      </Button>
+                    ))}
+                    <div>
+                      <p className="text-[11px] text-[#9898B4]">Overdue</p>
+                      <p className={cn("text-[13px] font-semibold", cls)}>{bill.overdue_days}d</p>
                     </div>
                   </div>
-                );
-              })}
-            </div>
 
-            <div className="hidden overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-sm lg:block">
-              <TableWrapper className="rounded-none border-0 shadow-none">
-                <Table>
-                  <THead>
-                    <tr>
-                      <TH>Invoice Number</TH>
-                      <TH>Invoice Date</TH>
-                      <TH>Route Name</TH>
-                      <TH>Outlet Name</TH>
-                      <TH>Brand</TH>
-                      <TH>Total Amount</TH>
-                      <TH>Remaining Amount</TH>
-                      <TH>Overdue Days</TH>
-                      <TH className="text-right">Action</TH>
-                    </tr>
-                  </THead>
-                  <TBody>
-                    {bills.map((bill) => {
-                      const severity = overdueSeverity(bill.overdue_days);
-                      const overdueClass =
-                        severity === "high"
-                          ? "text-red-600"
-                          : severity === "medium"
-                            ? "text-amber-600"
-                            : "text-slate-700";
+                  <Button className="mt-3 w-full" size="sm" onClick={() => openPayment(bill)}>
+                    Record Payment
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
 
-                      return (
-                        <tr key={bill.id} className="border-t border-slate-100 transition-colors hover:bg-sky-50">
-                          <TD className="font-medium text-slate-900">{bill.invoice_number}</TD>
-                          <TD>{formatDate(bill.invoice_date)}</TD>
-                          <TD>{bill.route_name}</TD>
-                          <TD>{bill.outlet_name}</TD>
-                          <TD>{bill.brand}</TD>
-                          <TD>{formatCurrency(bill.actual_amount)}</TD>
-                          <TD className="font-semibold">{formatCurrency(bill.remaining_amount)}</TD>
-                          <TD className={overdueClass}>{bill.overdue_days}</TD>
-                          <TD>
-                            <div className="flex justify-end">
-                              <Button
-                                size="sm"
-                                onClick={() => openPaymentModal(bill)}
-                              >
-                                Record Payment
-                              </Button>
-                            </div>
-                          </TD>
-                        </tr>
-                      );
-                    })}
-                  </TBody>
-                </Table>
-              </TableWrapper>
-
-              <DataTablePagination
-                page={page}
-                pageSize={pageSize}
-                total={query.data?.count ?? 0}
-                onPageChange={setPage}
+        {/* Desktop DataTable */}
+        <div className={bills.length > 0 && !query.isLoading ? "hidden lg:block" : "block"}>
+          <DataTable
+            columns={columns}
+            data={bills}
+            total={query.data?.count ?? 0}
+            page={page}
+            pageSize={pageSize}
+            ordering={ordering}
+            isLoading={query.isLoading}
+            isFetching={query.isFetching}
+            onPageChange={setPage}
+            onSortChange={handleSortChange}
+            rowKey={(r) => r.id}
+            minWidth={920}
+            filters={
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex-1">
+                  <SearchInput
+                    placeholder="Search assigned bills…"
+                    value={search}
+                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  />
+                </div>
+                <div className="w-full sm:w-52">
+                  <Select value={mode} onValueChange={(v) => { setMode(v as typeof mode); setPage(1); }}>
+                    <SelectTrigger><SelectValue placeholder="Search mode" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="invoice_number">Invoice Number</SelectItem>
+                      <SelectItem value="route_name">Route Name</SelectItem>
+                      <SelectItem value="outlet_name">Outlet Name</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            }
+            emptyState={
+              <EmptyState
+                icon={<FileText className="h-6 w-6" />}
+                title="No assigned invoices"
+                description="There are currently no open invoices assigned to you."
               />
-            </div>
-          </>
-        )}
+            }
+          />
+        </div>
       </div>
 
       <PaymentFormModal
         open={isPaymentOpen}
-        onOpenChange={handlePaymentOpenChange}
+        onOpenChange={(open) => { setIsPaymentOpen(open); if (!open) setSelectedBill(null); }}
         bill={selectedBill}
-        onBillCleared={() => {
-          // intentionally no tile update since KPI removed
-        }}
+        onBillCleared={() => {}}
       />
     </AppShell>
   );

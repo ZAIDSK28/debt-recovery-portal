@@ -1,7 +1,10 @@
+# payments/serializers.py
+
 from __future__ import annotations
 
 from decimal import Decimal
 
+from django.db import transaction
 from rest_framework import serializers
 
 from bills.models import Bill
@@ -98,15 +101,25 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        bill: Bill = self.context["bill"]
+        requested_bill: Bill = self.context["bill"]
         user = self.context["request"].user
-        payment = Payment.objects.create(
-            bill=bill,
-            dra_username=user.username,
-            **validated_data,
-        )
-        reconcile_bill_from_payments(bill)
-        return payment
+
+        with transaction.atomic():
+            bill = Bill.objects.select_for_update().get(pk=requested_bill.pk)
+
+            if bill.assigned_to_id != user.id or bill.status != Bill.Status.OPEN:
+                raise serializers.ValidationError({"detail": "Bill not found."})
+
+            if validated_data["amount"] > bill.remaining_amount:
+                raise serializers.ValidationError({"amount": "Amount cannot exceed remaining amount."})
+
+            payment = Payment.objects.create(
+                bill=bill,
+                dra_username=user.username,
+                **validated_data,
+            )
+            reconcile_bill_from_payments(bill)
+            return payment
 
 
 class PaymentStatusUpdateSerializer(serializers.ModelSerializer):
@@ -124,9 +137,16 @@ class PaymentStatusUpdateSerializer(serializers.ModelSerializer):
         return value
 
     def update(self, instance, validated_data):
-        payment = super().update(instance, validated_data)
-        reconcile_bill_from_payments(payment.bill)
-        return payment
+        with transaction.atomic():
+            payment = (
+                Payment.objects.select_for_update()
+                .select_related("bill")
+                .get(pk=instance.pk)
+            )
+            payment = super().update(payment, validated_data)
+            bill = Bill.objects.select_for_update().get(pk=payment.bill_id)
+            reconcile_bill_from_payments(bill)
+            return payment
 
 
 class DailySummarySerializer(serializers.Serializer):

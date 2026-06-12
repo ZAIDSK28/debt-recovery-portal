@@ -1,5 +1,4 @@
 // src/api/invoices.api.ts
-
 import { axiosInstance } from "@/api/axiosInstance";
 import type {
   CreateInvoiceReportPayload,
@@ -13,6 +12,19 @@ export interface InvoiceReportsQueryParams {
   page_size?: number;
   search?: string;
   ordering?: string;
+}
+
+export interface InvoiceSequenceSetting {
+  id: number;
+  name: string;
+  prefix: string;
+  date_format: string;
+  separator: string;
+  next_number: number;
+  padding: number;
+  is_active: boolean;
+  updated_at: string;
+  preview_invoice_number: string;
 }
 
 export async function createInvoiceReportApi(
@@ -62,4 +74,19 @@ export async function downloadInvoicePdfApi(id: number): Promise<Blob> {
     responseType: "blob",
   });
   return data as Blob;
+}
+
+export async function getInvoiceSequenceSettingApi(): Promise<InvoiceSequenceSetting> {
+  const { data } = await axiosInstance.get<InvoiceSequenceSetting>("/reports/invoice-sequence-setting/");
+  return data;
+}
+
+export async function updateInvoiceSequenceSettingApi(
+  payload: Partial<Omit<InvoiceSequenceSetting, "id" | "updated_at" | "preview_invoice_number">>
+): Promise<InvoiceSequenceSetting> {
+  const { data } = await axiosInstance.patch<InvoiceSequenceSetting>(
+    "/reports/invoice-sequence-setting/",
+    payload
+  );
+  return data;
 }

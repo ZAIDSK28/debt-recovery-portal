@@ -1,256 +1,264 @@
 // src/pages/invoices/invoices-list-page.tsx
-
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Download, Eye, FileText, Pencil, Plus, Printer, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/page-header";
 import { SearchInput } from "@/components/common/search-input";
-import { DataTablePagination } from "@/components/common/data-table-pagination";
+import { DataTable, type DataTableColumn } from "@/components/common/data-table";
 import { InvoiceStatusBadge } from "@/components/common/status-badge";
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Table, TableWrapper, TBody, TD, TH, THead } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { downloadInvoicePdfApi, getPrintableInvoiceHtmlApi } from "@/api/invoices.api";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useDeleteInvoiceReport, useInvoiceReports } from "@/hooks/useInvoices";
 import { downloadBlob, formatCurrency, formatDate, getApiError } from "@/lib/utils";
 import type { InvoiceReportListItem } from "@/types";
-import { ResponsiveTableSkeleton } from "@/components/common/loading-state";
 
-function InvoiceRowActions({
-  invoice,
-  editLocked,
+// ─── Compact icon action button group ────────────────────────────────────────
+
+function ActionCell({
+  row,
   onView,
   onEdit,
   onPrint,
   onPdf,
   onDelete,
 }: {
-  invoice: InvoiceReportListItem;
-  editLocked: boolean;
+  row: InvoiceReportListItem;
   onView: () => void;
   onEdit: () => void;
   onPrint: () => void;
   onPdf: () => void;
   onDelete: () => void;
 }) {
-  const canEdit = !editLocked;
-  const canDelete = true;
-
   return (
-    <div className="flex min-w-[400px] justify-end gap-2">
-      <Button variant="outline" size="sm" onClick={onView}>
-        <Eye className="mr-1 h-4 w-4" />
-        View
+    <div className="flex items-center justify-end gap-0.5">
+      <Button variant="ghost" size="icon" title="View" onClick={onView}>
+        <Eye className="h-3.5 w-3.5" />
       </Button>
-      <Button variant="outline" size="sm" onClick={onEdit} disabled={!canEdit}>
-        <Pencil className="mr-1 h-4 w-4" />
-        Edit
+      <Button variant="ghost" size="icon" title="Edit" onClick={onEdit}>
+        <Pencil className="h-3.5 w-3.5" />
       </Button>
-      <Button variant="outline" size="sm" onClick={onPrint}>
-        <Printer className="mr-1 h-4 w-4" />
-        Print
+      <Button variant="ghost" size="icon" title="Print" onClick={onPrint}>
+        <Printer className="h-3.5 w-3.5" />
       </Button>
-      <Button variant="outline" size="sm" onClick={onPdf}>
-        <Download className="mr-1 h-4 w-4" />
-        PDF
+      <Button variant="ghost" size="icon" title="Download PDF" onClick={onPdf}>
+        <Download className="h-3.5 w-3.5" />
       </Button>
-      <Button variant="outline" size="sm" onClick={onDelete} disabled={!canDelete}>
-        <Trash2 className="mr-1 h-4 w-4 text-red-500" />
-        Delete
+      <Button
+        variant="ghost"
+        size="icon"
+        title="Delete"
+        onClick={onDelete}
+        className="text-[#9898B4] hover:bg-[#FDEEF1] hover:text-[#E04E6A]"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
       </Button>
     </div>
   );
 }
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function InvoicesListPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const pageSize = 20;
   const [search, setSearch] = useState("");
-  const [lockedInvoiceIds, setLockedInvoiceIds] = useState<number[]>([]);
-  const debouncedSearch = useDebounce(search, 500);
+  const [ordering, setOrdering] = useState<string | undefined>("-created_at");
+  const debouncedSearch = useDebounce(search, 400);
   const deleteMutation = useDeleteInvoiceReport();
 
-  const invoiceParams = useMemo(
-    () => ({
-      page,
-      page_size: pageSize,
-      search: debouncedSearch || undefined,
-      ordering: "-created_at",
-    }),
-    [page, pageSize, debouncedSearch]
+  const params = useMemo(
+    () => ({ page, page_size: pageSize, search: debouncedSearch || undefined, ordering }),
+    [page, pageSize, debouncedSearch, ordering],
   );
 
-  const query = useInvoiceReports(invoiceParams);
-  const rows = query.data?.results ?? [];
+  const query = useInvoiceReports(params);
 
-  const actions = useMemo(
-    () => (
-      <Button className="w-full sm:w-auto" onClick={() => navigate("/invoices/new")}>
-        <Plus className="mr-2 h-4 w-4" />
-        Create Invoice
-      </Button>
-    ),
-    [navigate]
-  );
+  const handleSortChange = useCallback((ord: string | undefined) => {
+    setOrdering(ord);
+    setPage(1);
+  }, []);
 
   async function handlePrint(id: number, invoiceNumber: string) {
     try {
       const html = await getPrintableInvoiceHtmlApi(id);
-      const printWindow = window.open("", "_blank", "width=1024,height=768");
-
-      if (!printWindow) {
-        toast.error("Unable to open print window.");
-        return;
-      }
-
-      printWindow.document.open();
-      printWindow.document.write(html);
-      printWindow.document.close();
-      printWindow.focus();
-
-      printWindow.onload = () => {
-        printWindow.print();
-      };
-
-      toast.success(`Print preview opened for ${invoiceNumber}`);
-    } catch (error) {
-      toast.error(getApiError(error));
+      const w = window.open("", "_blank", "width=1024,height=768");
+      if (!w) { toast.error("Unable to open print window."); return; }
+      w.document.open(); w.document.write(html); w.document.close(); w.focus();
+      w.onload = () => w.print();
+    } catch (err) {
+      toast.error(getApiError(err));
     }
   }
 
-  async function handleDownloadPdf(id: number, invoiceNumber: string) {
+  async function handlePdf(id: number, invoiceNumber: string) {
     try {
       const blob = await downloadInvoicePdfApi(id);
       downloadBlob(blob, `${invoiceNumber}.pdf`);
       toast.success("PDF download started");
-    } catch (error) {
-      toast.error(getApiError(error));
+    } catch (err) {
+      toast.error(getApiError(err));
     }
   }
 
   async function handleDelete(id: number) {
-    const confirmed = window.confirm(
-      "Deleting this invoice will also permanently delete its linked bill and all related payments. This action cannot be undone."
-    );
-    if (!confirmed) return;
-
+    if (!window.confirm("Deleting this invoice will also delete its linked bill and all related payments. This cannot be undone.")) return;
     try {
       await deleteMutation.mutateAsync(id);
       toast.success("Invoice deleted");
-    } catch (error) {
-      toast.error(getApiError(error));
+    } catch (err) {
+      toast.error(getApiError(err));
     }
   }
 
+  const columns: DataTableColumn<InvoiceReportListItem>[] = [
+    {
+      key: "invoice_number",
+      header: "Invoice No.",
+      sortKey: "invoice_number",
+      render: (r) => (
+        <span className="font-mono text-[12px] font-semibold text-[#6F72BE]">
+          {r.invoice_number}
+        </span>
+      ),
+    },
+    {
+      key: "invoice_date",
+      header: "Date",
+      sortKey: "invoice_date",
+      render: (r) => <span className="text-[#9898B4]">{formatDate(r.invoice_date)}</span>,
+    },
+    {
+      key: "customer_name",
+      header: "Customer",
+      sortKey: "customer_name",
+      cellClassName: "max-w-[140px] truncate",
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (r) => <InvoiceStatusBadge status={r.status} />,
+    },
+    {
+      key: "route_name",
+      header: "Route",
+      cellClassName: "max-w-[110px] truncate text-[#6B6B8A]",
+      render: (r) => r.route_name || "—",
+    },
+    {
+      key: "outlet_name",
+      header: "Outlet",
+      cellClassName: "max-w-[110px] truncate text-[#6B6B8A]",
+      render: (r) => r.outlet_name || "—",
+    },
+    {
+      key: "brand",
+      header: "Brand",
+      render: (r) => r.brand || "—",
+    },
+    {
+      key: "subtotal",
+      header: "Subtotal",
+      sortKey: "subtotal",
+      render: (r) => <span className="tabular-nums">{formatCurrency(r.subtotal)}</span>,
+    },
+    {
+      key: "tax_amount",
+      header: "Tax",
+      render: (r) => <span className="tabular-nums text-[#9898B4]">{formatCurrency(r.tax_amount)}</span>,
+    },
+    {
+      key: "total_amount",
+      header: "Total",
+      sortKey: "total_amount",
+      render: (r) => <span className="font-semibold tabular-nums">{formatCurrency(r.total_amount)}</span>,
+    },
+    {
+      key: "linked_bill_id",
+      header: "Bill",
+      render: (r) =>
+        r.linked_bill_id ? (
+          <span className="font-mono text-[11px] text-[#9898B4]">#{r.linked_bill_id}</span>
+        ) : (
+          "—"
+        ),
+    },
+    {
+      key: "created_at",
+      header: "Created",
+      sortKey: "created_at",
+      render: (r) => <span className="text-[#9898B4]">{formatDate(r.created_at)}</span>,
+    },
+    {
+      key: "actions",
+      header: "",
+      headerClassName: "w-[130px]",
+      cellClassName: "w-[130px]",
+      render: (r) => (
+        <ActionCell
+          row={r}
+          onView={() => navigate(`/invoices/${r.id}`)}
+          onEdit={() => navigate(`/invoices/${r.id}/edit`, { state: { lockTrackerEnabled: true } })}
+          onPrint={() => void handlePrint(r.id, r.invoice_number)}
+          onPdf={() => void handlePdf(r.id, r.invoice_number)}
+          onDelete={() => void handleDelete(r.id)}
+        />
+      ),
+    },
+  ];
+
   return (
     <AppShell title="Invoices">
-      <div className="space-y-5">
+      <div className="space-y-4">
         <PageHeader
           title="Invoice List"
           description="Manage printable invoices separately from dashboard bills."
-          actions={actions}
+          actions={
+            <Button onClick={() => navigate("/invoices/new")}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Create Invoice
+            </Button>
+          }
         />
 
-        <div className="rounded-[18px] border border-slate-200 bg-white p-3.5 shadow-sm">
-          <div className="w-full max-w-sm">
+        <DataTable
+          columns={columns}
+          data={query.data?.results ?? []}
+          total={query.data?.count ?? 0}
+          page={page}
+          pageSize={pageSize}
+          ordering={ordering}
+          isLoading={query.isLoading}
+          isFetching={query.isFetching}
+          onPageChange={setPage}
+          onSortChange={handleSortChange}
+          rowKey={(r) => r.id}
+          minWidth={1300}
+          filters={
             <SearchInput
-              placeholder="Search invoices..."
+              placeholder="Search by invoice number, customer…"
               value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             />
-          </div>
-        </div>
-
-        {query.isLoading ? (
-          <ResponsiveTableSkeleton />
-        ) : rows.length === 0 ? (
-          <EmptyState
-            icon={<FileText className="h-6 w-6" />}
-            title="No invoices found"
-            description="Create a new printable invoice to get started."
-            action={
-              <Button className="w-full sm:w-auto" onClick={() => navigate("/invoices/new")}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Invoice
-              </Button>
-            }
-          />
-        ) : (
-          <div className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-sm">
-            <TableWrapper className="w-full rounded-none border-0 shadow-none">
-              <Table className="min-w-[1600px] w-full table-auto">
-                <THead>
-                  <tr>
-                    <TH>Invoice Number</TH>
-                    <TH>Invoice Date</TH>
-                    <TH>Customer Name</TH>
-                    <TH>Status</TH>
-                    <TH>Route Name</TH>
-                    <TH>Outlet Name</TH>
-                    <TH>Brand</TH>
-                    <TH>Subtotal</TH>
-                    <TH>Tax Amount</TH>
-                    <TH>Discount</TH>
-                    <TH>Total Amount</TH>
-                    <TH>Creation Mode</TH>
-                    <TH>Linked Bill</TH>
-                    <TH>Created At</TH>
-                    <TH>Updated At</TH>
-                    <TH className="w-[420px] text-right">Actions</TH>
-                  </tr>
-                </THead>
-                <TBody>
-                  {rows.map((invoice) => (
-                    <tr key={invoice.id} className="border-t border-slate-100 align-top transition-colors hover:bg-sky-50">
-                      <TD className="whitespace-normal break-words font-medium text-slate-900">
-                        {invoice.invoice_number}
-                      </TD>
-                      <TD>{formatDate(invoice.invoice_date)}</TD>
-                      <TD className="whitespace-normal break-words">{invoice.customer_name}</TD>
-                      <TD><InvoiceStatusBadge status={invoice.status} /></TD>
-                      <TD className="whitespace-normal break-words">{invoice.route_name || "—"}</TD>
-                      <TD className="whitespace-normal break-words">{invoice.outlet_name || "—"}</TD>
-                      <TD className="whitespace-normal break-words">{invoice.brand || "—"}</TD>
-                      <TD>{formatCurrency(invoice.subtotal)}</TD>
-                      <TD>{formatCurrency(invoice.tax_amount)}</TD>
-                      <TD>{formatCurrency(invoice.discount_amount)}</TD>
-                      <TD>{formatCurrency(invoice.total_amount)}</TD>
-                      <TD className="whitespace-normal capitalize">{invoice.creation_mode.replaceAll("_", " ")}</TD>
-                      <TD>{invoice.linked_bill_id ? `#${invoice.linked_bill_id}` : "—"}</TD>
-                      <TD>{formatDate(invoice.created_at)}</TD>
-                      <TD>{formatDate(invoice.updated_at)}</TD>
-                      <TD className="whitespace-nowrap">
-                        <InvoiceRowActions
-                          invoice={invoice}
-                          editLocked={lockedInvoiceIds.includes(invoice.id)}
-                          onView={() => navigate(`/invoices/${invoice.id}`)}
-                          onEdit={() => navigate(`/invoices/${invoice.id}/edit`, { state: { lockTrackerEnabled: true } })}
-                          onPrint={() => void handlePrint(invoice.id, invoice.invoice_number)}
-                          onPdf={() => void handleDownloadPdf(invoice.id, invoice.invoice_number)}
-                          onDelete={() => void handleDelete(invoice.id)}
-                        />
-                      </TD>
-                    </tr>
-                  ))}
-                </TBody>
-              </Table>
-            </TableWrapper>
-
-            <DataTablePagination
-              page={page}
-              pageSize={pageSize}
-              total={query.data?.count ?? 0}
-              onPageChange={setPage}
+          }
+          emptyState={
+            <EmptyState
+              icon={<FileText className="h-5 w-5" />}
+              title="No invoices found"
+              description="Create a new printable invoice to get started."
+              action={
+                <Button onClick={() => navigate("/invoices/new")}>
+                  <Plus className="mr-1.5 h-3.5 w-3.5" />
+                  Create Invoice
+                </Button>
+              }
             />
-          </div>
-        )}
+          }
+        />
       </div>
     </AppShell>
   );

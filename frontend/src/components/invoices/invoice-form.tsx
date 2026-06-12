@@ -1,5 +1,4 @@
 // src/components/invoices/invoice-form.tsx
-
 import { memo, useEffect, useMemo, useState } from "react";
 import { useFieldArray, useForm, useWatch, type Control, type UseFormReturn } from "react-hook-form";
 import { z } from "zod";
@@ -17,6 +16,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { useCreateInvoiceReport, useUpdateInvoiceReport } from "@/hooks/useInvoices";
 import { useOutlets, useRoutes } from "@/hooks/useRoutes";
 import { useProducts } from "@/hooks/useProducts";
+import { useParties } from "@/hooks/useParties";
 import { formatCurrency, getApiError } from "@/lib/utils";
 import type { CreateInvoiceReportPayload, InvoiceCreationMode, InvoiceReport, Product } from "@/types";
 
@@ -27,9 +27,10 @@ const itemSchema = z.object({
 
 const invoiceFormSchema = z
   .object({
-    invoice_number: z.string().min(1, "Invoice number is required"),
+    invoice_number: z.string().optional(),
     invoice_date: z.string().min(1, "Invoice date is required"),
-    customer_name: z.string().min(1, "Customer name is required"),
+    party_id: z.string().optional(),
+    customer_name: z.string().optional(),
     customer_address: z.string().optional(),
     customer_phone: z.string().optional(),
     gst_number: z.string().optional(),
@@ -45,6 +46,14 @@ const invoiceFormSchema = z
   .superRefine((values, ctx) => {
     const requiresBill =
       values.creation_mode === "bill_only" || values.creation_mode === "printable_and_bill";
+
+    if (!values.party_id?.trim() && !values.customer_name?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["customer_name"],
+        message: "Select a party or enter a customer name",
+      });
+    }
 
     if (requiresBill) {
       if (!values.route_name?.trim()) {
@@ -80,7 +89,7 @@ function parseMoney(value: string): number {
 }
 
 function buildProductLabel(product: Product): string {
-  return `${product.product_code} - ${product.name} (${product.category})`;
+  return `${product.product_code} - ${product.name} (${product.category_name || product.category})`;
 }
 
 const InvoiceItemRow = memo(function InvoiceItemRow({
@@ -211,6 +220,8 @@ export function InvoiceForm({
   const createMutation = useCreateInvoiceReport();
   const updateMutation = useUpdateInvoiceReport(initialInvoice?.id ?? 0);
   const { data: routes = [] } = useRoutes();
+  const { data: parties = [] } = useParties();
+  console.log("Parties for invoice form:", parties);
   const [productSearch, setProductSearch] = useState("");
   const { data: productsResponse } = useProducts({
     search: productSearch || undefined,
@@ -226,6 +237,7 @@ export function InvoiceForm({
     defaultValues: {
       invoice_number: "",
       invoice_date: "",
+      party_id: "",
       customer_name: "",
       customer_address: "",
       customer_phone: "",
@@ -250,9 +262,10 @@ export function InvoiceForm({
     if (!initialInvoice) return;
 
     form.reset({
-      invoice_number: initialInvoice.invoice_number,
+      invoice_number: initialInvoice.invoice_number || "",
       invoice_date: initialInvoice.invoice_date,
-      customer_name: initialInvoice.customer_name,
+      party_id: initialInvoice.party_id ? String(initialInvoice.party_id) : "",
+      customer_name: initialInvoice.customer_name || "",
       customer_address: initialInvoice.customer_address || "",
       customer_phone: initialInvoice.customer_phone || "",
       gst_number: initialInvoice.gst_number || "",
@@ -280,10 +293,25 @@ export function InvoiceForm({
 
   const creationMode = useWatch({ control: form.control, name: "creation_mode" });
   const invoiceDate = useWatch({ control: form.control, name: "invoice_date" });
+  const selectedPartyId = useWatch({ control: form.control, name: "party_id" });
   const selectedRouteName = useWatch({ control: form.control, name: "route_name" });
   const selectedOutletName = useWatch({ control: form.control, name: "outlet_name" });
   const watchedItems = useWatch({ control: form.control, name: "items" }) ?? [];
   const discountAmount = useWatch({ control: form.control, name: "discount_amount" }) ?? "";
+
+  const selectedParty = useMemo(
+    () => parties.find((party) => String(party.id) === selectedPartyId),
+    [parties, selectedPartyId]
+  );
+
+  useEffect(() => {
+    if (!selectedParty) return;
+
+    form.setValue("customer_name", selectedParty.name, { shouldDirty: true, shouldValidate: true });
+    form.setValue("customer_address", selectedParty.address || "", { shouldDirty: true, shouldValidate: true });
+    form.setValue("customer_phone", selectedParty.phone || "", { shouldDirty: true, shouldValidate: true });
+    form.setValue("gst_number", selectedParty.gst_number || "", { shouldDirty: true, shouldValidate: true });
+  }, [selectedParty, form]);
 
   const selectedRoute = useMemo(
     () => routes.find((route) => route.name === selectedRouteName),
@@ -291,6 +319,11 @@ export function InvoiceForm({
   );
 
   const { data: outlets = [] } = useOutlets(selectedRoute?.id ?? null);
+
+  const partyOptions = useMemo(
+    () => parties.filter((party) => party.is_active).map((party) => ({ value: String(party.id), label: party.name })),
+    [parties]
+  );
 
   const routeOptions = useMemo(
     () => routes.map((route) => ({ value: route.name, label: route.name })),
@@ -347,9 +380,10 @@ export function InvoiceForm({
     try {
       const values = form.getValues();
       const payload: CreateInvoiceReportPayload = {
-        invoice_number: values.invoice_number,
+        invoice_number: values.invoice_number || "",
         invoice_date: values.invoice_date,
-        customer_name: values.customer_name,
+        party_id: values.party_id ? Number(values.party_id) : undefined,
+        customer_name: values.customer_name || "",
         customer_address: values.customer_address || "",
         customer_phone: values.customer_phone || "",
         gst_number: values.gst_number || "",
@@ -424,7 +458,7 @@ export function InvoiceForm({
         <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="space-y-2">
             <Label htmlFor="invoice_number">Invoice Number</Label>
-            <Input id="invoice_number" {...form.register("invoice_number")} />
+            <Input id="invoice_number" placeholder="Leave blank to auto-generate" {...form.register("invoice_number")} />
             {form.formState.errors.invoice_number ? (
               <p className="text-sm text-red-500">{form.formState.errors.invoice_number.message}</p>
             ) : null}
@@ -477,6 +511,23 @@ export function InvoiceForm({
           <CardTitle>Party Details</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-2 md:col-span-2">
+            <Label>Party</Label>
+            <Combobox
+              options={partyOptions}
+              value={selectedPartyId}
+              placeholder="Select party"
+              searchPlaceholder="Search parties..."
+              onChange={(value) =>
+                form.setValue("party_id", value, {
+                  shouldDirty: true,
+                  shouldTouch: true,
+                  shouldValidate: true,
+                })
+              }
+            />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="customer_name">Customer Name</Label>
             <Input id="customer_name" {...form.register("customer_name")} />

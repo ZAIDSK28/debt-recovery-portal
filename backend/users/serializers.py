@@ -6,12 +6,18 @@ from rest_framework import serializers
 from users.models import User
 
 
+# BUG FIX: Added `is_active` to UserSerializer fields.
+# Previously UserSerializer (used in login/verify-otp responses) omitted is_active,
+# while UserAdminSerializer (used in the user list) included it.
+# This divergence meant the User object stored in localStorage post-login
+# permanently lacked is_active, making any gate on user.is_active undefined.
+# Both serializers now return the same User shape.
 class UserSerializer(serializers.ModelSerializer):
     is_admin = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["id", "username", "full_name", "email", "role", "is_admin"]
+        fields = ["id", "username", "full_name", "email", "role", "is_active", "is_admin"]
 
     def get_is_admin(self, obj: User) -> bool:
         return obj.is_admin
@@ -70,9 +76,19 @@ class LoginSerializer(serializers.Serializer):
     def validate(self, attrs):
         username = attrs["username"]
         password = attrs["password"]
+
+        try:
+            user_obj = User.objects.get(username=username)
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"detail": "Invalid username or password."})
+
+        if not user_obj.is_active:
+            raise serializers.ValidationError({"detail": "User account is inactive."})
+
         user = authenticate(username=username, password=password)
         if not user:
             raise serializers.ValidationError({"detail": "Invalid username or password."})
+
         attrs["user"] = user
         return attrs
 

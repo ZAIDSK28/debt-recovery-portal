@@ -269,14 +269,14 @@ def import_bills_from_excel(file, job: BillImportJob | None = None) -> dict:
             message = "invoice_number already exists"
             logger.warning(
                 "Bill import row integrity failure",
-                extra={"row_number": row_number, "message": message},
+                extra={"row_number": row_number, "error_message": message},
             )
             errors.append({"row": row_number, "message": message})
         except Exception as exc:
             message = _safe_error_message(exc)
             logger.warning(
                 "Bill import row failed",
-                extra={"row_number": row_number, "message": message},
+                extra={"row_number": row_number, "error_message": message},
             )
             errors.append({"row": row_number, "message": message})
         finally:

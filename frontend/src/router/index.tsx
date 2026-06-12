@@ -20,6 +20,7 @@ const InvoiceEditPage = lazy(() => import("@/pages/invoices/invoice-edit-page"))
 const ProductsListPage = lazy(() => import("@/pages/products/products-list-page"));
 const ProductCreatePage = lazy(() => import("@/pages/products/product-create-page"));
 const ProductEditPage = lazy(() => import("@/pages/products/product-edit-page"));
+const StockManagementPage = lazy(() => import("@/pages/stock/stock-management-page"));
 const ErrorPage = lazy(() => import("@/pages/error-page"));
 
 export const router = createBrowserRouter([
@@ -80,6 +81,10 @@ export const router = createBrowserRouter([
       {
         path: "/products/:id/edit",
         element: <ProductEditPage />,
+      },
+      {
+        path: "/stock",
+        element: <StockManagementPage />,
       },
       {
         path: "/invoices",

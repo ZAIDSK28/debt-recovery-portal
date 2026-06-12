@@ -1,4 +1,5 @@
-import { useEffect, useMemo } from "react";
+// src/components/payments/payment-form-modal.tsx
+import { useEffect, useMemo, useRef } from "react";
 import { z } from "zod";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -96,6 +97,7 @@ export function PaymentFormModal({
   onBillCleared: () => void;
 }) {
   const mutation = useRecordPayment();
+  const submitLockRef = useRef(false);
 
   const form = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentSchema),
@@ -118,6 +120,7 @@ export function PaymentFormModal({
 
   useEffect(() => {
     if (open) {
+      submitLockRef.current = false;
       form.reset({
         amount: "",
         payment_method: "cash",
@@ -134,7 +137,7 @@ export function PaymentFormModal({
   const remainingAmount = useMemo(() => Number(bill?.remaining_amount ?? 0), [bill]);
 
   async function onSubmit(values: PaymentFormValues) {
-    if (!bill) return;
+    if (!bill || submitLockRef.current || mutation.isPending) return;
 
     const numericAmount = Number(values.amount);
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
@@ -146,6 +149,8 @@ export function PaymentFormModal({
       toast.error("Amount cannot exceed remaining amount.");
       return;
     }
+
+    submitLockRef.current = true;
 
     try {
       await mutation.mutateAsync({
@@ -168,12 +173,15 @@ export function PaymentFormModal({
 
       toast.success("Payment recorded");
       onOpenChange(false);
+      onBillCleared();
 
       if (immediateClear) {
         onBillCleared();
       }
     } catch (error) {
       toast.error(getApiError(error));
+    } finally {
+      submitLockRef.current = false;
     }
   }
 
@@ -198,7 +206,7 @@ export function PaymentFormModal({
           <form id="payment-form" className="grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={form.handleSubmit(onSubmit)}>
             <div className="space-y-2 md:col-span-1">
               <Label htmlFor="amount">Amount</Label>
-              <Input id="amount" type="number" step="0.01" {...form.register("amount")} />
+              <Input id="amount" type="number" step="0.01" {...form.register("amount")} disabled={mutation.isPending} />
               {form.formState.errors.amount ? (
                 <p className="text-sm text-red-500">{form.formState.errors.amount.message}</p>
               ) : null}
@@ -216,7 +224,7 @@ export function PaymentFormModal({
                   })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className={mutation.isPending ? "pointer-events-none opacity-50" : undefined}>
                   <SelectValue placeholder="Select method" />
                 </SelectTrigger>
                 <SelectContent>
@@ -231,7 +239,7 @@ export function PaymentFormModal({
             {(method === "upi" || method === "electronic") && (
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="transaction_number">Transaction Number</Label>
-                <Input id="transaction_number" {...form.register("transaction_number")} />
+                <Input id="transaction_number" {...form.register("transaction_number")} disabled={mutation.isPending} />
                 {form.formState.errors.transaction_number ? (
                   <p className="text-sm text-red-500">{form.formState.errors.transaction_number.message}</p>
                 ) : null}
@@ -242,7 +250,7 @@ export function PaymentFormModal({
               <>
                 <div className="space-y-2">
                   <Label htmlFor="cheque_number">Cheque Number</Label>
-                  <Input id="cheque_number" {...form.register("cheque_number")} />
+                  <Input id="cheque_number" {...form.register("cheque_number")} disabled={mutation.isPending} />
                   {form.formState.errors.cheque_number ? (
                     <p className="text-sm text-red-500">{form.formState.errors.cheque_number.message}</p>
                   ) : null}
@@ -260,6 +268,7 @@ export function PaymentFormModal({
                       })
                     }
                     clearable
+                    disabled={mutation.isPending}
                   />
                   {form.formState.errors.cheque_date ? (
                     <p className="text-sm text-red-500">{form.formState.errors.cheque_date.message}</p>
@@ -278,7 +287,7 @@ export function PaymentFormModal({
                       })
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={mutation.isPending ? "pointer-events-none opacity-50" : undefined}>
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -304,7 +313,7 @@ export function PaymentFormModal({
                       })
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={mutation.isPending ? "pointer-events-none opacity-50" : undefined}>
                       <SelectValue placeholder="Select firm" />
                     </SelectTrigger>
                     <SelectContent>
@@ -322,7 +331,7 @@ export function PaymentFormModal({
         </DialogBody>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
             Cancel
           </Button>
           <Button form="payment-form" type="submit" disabled={mutation.isPending}>

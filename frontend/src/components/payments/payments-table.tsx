@@ -1,15 +1,14 @@
 // src/components/payments/payments-table.tsx
+import type { ReactNode } from "react";
 import { memo } from "react";
-import { Table, TableWrapper, TBody, TD, TH, THead } from "@/components/ui/table";
-import { DataTablePagination } from "@/components/common/data-table-pagination";
+import { Wallet } from "lucide-react";
+import { DataTable, type DataTableColumn } from "@/components/common/data-table";
 import { ChequeStatusBadge } from "@/components/common/status-badge";
 import { ChequeStatusSelect } from "@/components/payments/cheque-status-select";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   formatCurrency,
   formatDate,
-  getPaymentReferenceLabel,
-  getPaymentReferenceValue,
   isChequeLikePayment,
 } from "@/lib/utils";
 import type { Payment } from "@/types";
@@ -19,215 +18,187 @@ interface PaymentsTableProps {
   total: number;
   page: number;
   pageSize: number;
+  ordering?: string;
+  isLoading: boolean;
+  isFetching?: boolean;
   onPageChange: (page: number) => void;
+  onSortChange: (ordering: string | undefined) => void;
   editableStatus?: boolean;
   showChequeColumns?: boolean;
   showStatusColumn?: boolean;
+  filters?: ReactNode;
+  emptyTitle?: string;
+  emptyDescription?: string;
 }
 
-const MobilePaymentCard = memo(function MobilePaymentCard({
-  payment,
-  editableStatus,
-  showChequeColumns,
-  showStatusColumn,
-}: {
-  payment: Payment;
-  editableStatus: boolean;
-  showChequeColumns: boolean;
-  showStatusColumn: boolean;
-}) {
-  const chequeLike = isChequeLikePayment(payment);
-  const referenceLabel = getPaymentReferenceLabel(payment);
-  const referenceValue = getPaymentReferenceValue(payment);
-
-  return (
-    <div className="rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f8fcff)] p-3.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">Payment</p>
-          <p className="truncate text-[15px] font-semibold text-slate-900">{payment.bill_invoice_number}</p>
-          <p className="mt-1 text-sm text-slate-500">ID #{payment.id}</p>
-        </div>
-        {showStatusColumn && chequeLike ? (
-          <div className="shrink-0">
-            {editableStatus ? (
-              <ChequeStatusSelect paymentId={payment.id} value={payment.cheque_status} />
-            ) : (
-              <ChequeStatusBadge status={payment.cheque_status} />
-            )}
-          </div>
-        ) : null}
-      </div>
-
-      <div className="mt-3.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <p className="text-[11px] text-slate-500">DRA</p>
-          <p className="text-sm font-medium text-slate-900">{payment.dra_username}</p>
-        </div>
-        <div>
-          <p className="text-[11px] text-slate-500">Method</p>
-          <p className="text-sm font-medium capitalize text-slate-900">{payment.payment_method}</p>
-        </div>
-        <div>
-          <p className="text-[11px] text-slate-500">Amount</p>
-          <p className="text-sm font-semibold text-slate-900">{formatCurrency(payment.amount)}</p>
-        </div>
-        <div>
-          <p className="text-[11px] text-slate-500">Created</p>
-          <p className="text-sm font-medium text-slate-900">{formatDate(payment.created_at)}</p>
-        </div>
-
-        {showChequeColumns && referenceValue !== "—" ? (
-          <div>
-            <p className="text-[11px] text-slate-500">{referenceLabel}</p>
-            <p className="text-sm font-medium text-slate-900">{referenceValue}</p>
-          </div>
-        ) : null}
-
-        {showChequeColumns && chequeLike ? (
-          <div>
-            <p className="text-[11px] text-slate-500">Firm</p>
-            <p className="text-sm font-medium text-slate-900">{payment.firm || "—"}</p>
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-});
-
-const DesktopPaymentRow = memo(function DesktopPaymentRow({
-  payment,
-  editableStatus,
-  showChequeColumns,
-  showStatusColumn,
-}: {
-  payment: Payment;
-  editableStatus: boolean;
-  showChequeColumns: boolean;
-  showStatusColumn: boolean;
-}) {
-  const chequeLike = isChequeLikePayment(payment);
-
-  return (
-    <tr className="border-t border-slate-100 transition-colors duration-150 hover:bg-sky-50/80">
-      <TD>{payment.id}</TD>
-      <TD className="font-medium text-slate-900">{payment.bill_invoice_number}</TD>
-      <TD>{payment.dra_username}</TD>
-      <TD className="capitalize">{payment.payment_method}</TD>
-      <TD>{formatCurrency(payment.amount)}</TD>
-
-      {showChequeColumns ? (
-        <>
-          <TD>{payment.transaction_number || "—"}</TD>
-          <TD>{payment.cheque_number || "—"}</TD>
-          <TD>{formatDate(payment.cheque_date)}</TD>
-          <TD className="capitalize">{payment.cheque_type || "—"}</TD>
-        </>
-      ) : (
-        <TD>{payment.transaction_number || "—"}</TD>
-      )}
-
-      {showStatusColumn ? (
-        <TD>
-          {chequeLike ? (
-            editableStatus ? (
-              <ChequeStatusSelect paymentId={payment.id} value={payment.cheque_status} />
-            ) : (
-              <ChequeStatusBadge status={payment.cheque_status} />
-            )
-          ) : (
-            "—"
-          )}
-        </TD>
-      ) : null}
-
-      <TD>{chequeLike ? payment.firm || "—" : "—"}</TD>
-      <TD>{formatDate(payment.created_at)}</TD>
-    </tr>
-  );
-});
-
-export function PaymentsTable({
+export const PaymentsTable = memo(function PaymentsTable({
   data,
   total,
   page,
   pageSize,
+  ordering,
+  isLoading,
+  isFetching,
   onPageChange,
+  onSortChange,
   editableStatus = false,
   showChequeColumns = true,
   showStatusColumn = true,
+  filters,
+  emptyTitle = "No payments found",
+  emptyDescription = "Payment records will appear here when available.",
 }: PaymentsTableProps) {
-  const hasRows = data.length > 0;
-  const desktopMinWidth = showChequeColumns ? "w-full min-w-[1320px] table-auto" : "w-full min-w-[980px] table-auto";
+  const columns: DataTableColumn<Payment>[] = [
+    {
+      key: "id",
+      header: "ID",
+      sortKey: "id",
+      render: (r) => <span className="tabular-nums text-[#9898B4]">#{r.id}</span>,
+    },
+    {
+      key: "bill_invoice_number",
+      header: "Invoice",
+      sortKey: "bill__invoice_number",
+      render: (r) => (
+        <span className="font-mono text-[11.5px] font-semibold text-[#6F72BE]">
+          {r.bill_invoice_number}
+        </span>
+      ),
+    },
+    {
+      key: "dra_username",
+      header: "DRA",
+      sortKey: "dra__username",
+      render: (r) => <span className="text-[#1E1E30]">{r.dra_username}</span>,
+    },
+    {
+      key: "payment_method",
+      header: "Method",
+      render: (r) => (
+        <span className="capitalize text-[#6B6B8A]">{r.payment_method}</span>
+      ),
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      sortKey: "amount",
+      render: (r) => (
+        <span className="font-semibold tabular-nums">{formatCurrency(r.amount)}</span>
+      ),
+    },
+
+    // Cheque-specific columns
+    ...(showChequeColumns
+      ? ([
+          {
+            key: "transaction_number",
+            header: "Txn No.",
+            render: (r: Payment) => (
+              <span className="font-mono text-[11px] text-[#6B6B8A]">
+                {r.transaction_number || "—"}
+              </span>
+            ),
+          },
+          {
+            key: "cheque_number",
+            header: "Cheque No.",
+            render: (r: Payment) => r.cheque_number || "—",
+          },
+          {
+            key: "cheque_date",
+            header: "Cheque Date",
+            render: (r: Payment) =>
+              r.cheque_date ? (
+                <span className="text-[#9898B4]">{formatDate(r.cheque_date)}</span>
+              ) : (
+                "—"
+              ),
+          },
+          {
+            key: "cheque_type",
+            header: "Type",
+            render: (r: Payment) =>
+              r.cheque_type ? (
+                <span className="font-mono uppercase text-[11px]">{r.cheque_type}</span>
+              ) : (
+                "—"
+              ),
+          },
+          {
+            key: "firm",
+            header: "Firm",
+            render: (r: Payment) =>
+              isChequeLikePayment(r) ? (
+                <span className="text-[#6B6B8A]">{r.firm || "—"}</span>
+              ) : (
+                "—"
+              ),
+          },
+        ] as DataTableColumn<Payment>[])
+      : ([
+          {
+            key: "transaction_number",
+            header: "Reference",
+            render: (r: Payment) => (
+              <span className="font-mono text-[11px] text-[#6B6B8A]">
+                {r.transaction_number || "—"}
+              </span>
+            ),
+          },
+        ] as DataTableColumn<Payment>[])),
+
+    // Status column
+    ...(showStatusColumn
+      ? ([
+          {
+            key: "cheque_status",
+            header: "Status",
+            render: (r: Payment) =>
+              isChequeLikePayment(r) ? (
+                editableStatus ? (
+                  <ChequeStatusSelect paymentId={r.id} value={r.cheque_status} />
+                ) : (
+                  <ChequeStatusBadge status={r.cheque_status} />
+                )
+              ) : (
+                "—"
+              ),
+          },
+        ] as DataTableColumn<Payment>[])
+      : []),
+
+    {
+      key: "created_at",
+      header: "Created",
+      sortKey: "created_at",
+      render: (r) => (
+        <span className="text-[12px] text-[#9898B4]">{formatDate(r.created_at)}</span>
+      ),
+    },
+  ];
 
   return (
-    <div className="w-full overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-sm">
-      {!hasRows ? (
-        <div className="p-4">
-          <EmptyState
-            title="No payments found"
-            description="Payment records will appear here when available."
-          />
-        </div>
-      ) : (
-        <>
-          <div className="space-y-3 p-3.5 lg:hidden">
-            {data.map((payment) => (
-              <MobilePaymentCard
-                key={payment.id}
-                payment={payment}
-                editableStatus={editableStatus}
-                showChequeColumns={showChequeColumns}
-                showStatusColumn={showStatusColumn}
-              />
-            ))}
-          </div>
-
-          <div className="hidden w-full lg:block">
-            <TableWrapper className="w-full rounded-none border-0 shadow-none">
-              <Table className={desktopMinWidth}>
-                <THead>
-                  <tr>
-                    <TH>ID</TH>
-                    <TH>Invoice</TH>
-                    <TH>DRA</TH>
-                    <TH>Method</TH>
-                    <TH>Amount</TH>
-
-                    {showChequeColumns ? (
-                      <>
-                        <TH>Transaction No.</TH>
-                        <TH>Cheque No.</TH>
-                        <TH>Cheque Date</TH>
-                        <TH>Cheque Type</TH>
-                      </>
-                    ) : (
-                      <TH>Transaction No.</TH>
-                    )}
-
-                    {showStatusColumn ? <TH>Status</TH> : null}
-                    <TH>Firm</TH>
-                    <TH>Created</TH>
-                  </tr>
-                </THead>
-                <TBody>
-                  {data.map((payment) => (
-                    <DesktopPaymentRow
-                      key={payment.id}
-                      payment={payment}
-                      editableStatus={editableStatus}
-                      showChequeColumns={showChequeColumns}
-                      showStatusColumn={showStatusColumn}
-                    />
-                  ))}
-                </TBody>
-              </Table>
-            </TableWrapper>
-          </div>
-        </>
-      )}
-
-      <DataTablePagination page={page} pageSize={pageSize} total={total} onPageChange={onPageChange} />
-    </div>
+    <DataTable
+      columns={columns}
+      data={data}
+      total={total}
+      page={page}
+      pageSize={pageSize}
+      ordering={ordering}
+      isLoading={isLoading}
+      isFetching={isFetching}
+      onPageChange={onPageChange}
+      onSortChange={onSortChange}
+      rowKey={(r) => r.id}
+      minWidth={showChequeColumns ? 1180 : 860}
+      filters={filters}
+      emptyState={
+        <EmptyState
+          icon={<Wallet className="h-5 w-5" />}
+          title={emptyTitle}
+          description={emptyDescription}
+        />
+      }
+    />
   );
-}
+});

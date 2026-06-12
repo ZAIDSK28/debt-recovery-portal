@@ -1,45 +1,76 @@
-import { useState } from "react";
-import { Download, Filter, FileClock } from "lucide-react";
+// src/pages/admin/admin-electronic-page.tsx
+import { useCallback, useMemo, useState } from "react";
+import { Download } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/page-header";
+import { SearchInput } from "@/components/common/search-input";
 import { PaymentsTable } from "@/components/payments/payments-table";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { DateInput } from "@/components/ui/date-input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { usePayments } from "@/hooks/usePayments";
+import { useDebounce } from "@/hooks/useDebounce";
 import { exportPaymentsApi } from "@/api/payments.api";
 import { downloadBlob, getApiError } from "@/lib/utils";
-import { ResponsiveTableSkeleton } from "@/components/common/loading-state";
 
 export default function AdminElectronicPage() {
   const [page, setPage] = useState(1);
   const pageSize = 20;
+  const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [chequeStatus, setChequeStatus] = useState("all");
+  const [ordering, setOrdering] = useState<string | undefined>("-created_at");
+  const debouncedSearch = useDebounce(search, 400);
 
-  const query = usePayments({
-    page,
-    page_size: pageSize,
-    payment_method: "electronic",
-    start_date: startDate || undefined,
-    end_date: endDate || undefined,
-  });
+  const params = useMemo(
+    () => ({
+      page,
+      page_size: pageSize,
+      payment_method: "electronic" as const,
+      search: debouncedSearch || undefined,
+      start_date: startDate || undefined,
+      end_date: endDate || undefined,
+      cheque_status: chequeStatus !== "all" ? chequeStatus : undefined,
+      ordering,
+    }),
+    [page, pageSize, debouncedSearch, startDate, endDate, chequeStatus, ordering],
+  );
 
-  const rows = query.data?.results ?? [];
+  const query = usePayments(params);
+
+  const handleSortChange = useCallback((ord: string | undefined) => {
+    setOrdering(ord);
+    setPage(1);
+  }, []);
+
+  function reset() {
+    setSearch("");
+    setStartDate("");
+    setEndDate("");
+    setChequeStatus("all");
+    setPage(1);
+  }
+
+  const isDirty = search || startDate || endDate || chequeStatus !== "all";
 
   async function handleExport() {
     if (startDate && endDate && startDate > endDate) {
       toast.error("Start date cannot be after end date.");
       return;
     }
-
     if ((query.data?.count ?? 0) === 0) {
-      toast.info("No electronic records available to export in the selected date range.");
+      toast.info("No records to export.");
       return;
     }
-
     try {
       const blob = await exportPaymentsApi({
         payment_method: "electronic",
@@ -47,113 +78,97 @@ export default function AdminElectronicPage() {
         end_date: endDate || undefined,
       });
       downloadBlob(blob, "electronic_history.xlsx");
-      toast.success("Electronic export started");
-    } catch (error) {
-      toast.error(getApiError(error));
+      toast.success("Export started");
+    } catch (err) {
+      toast.error(getApiError(err));
     }
   }
 
   return (
     <AppShell title="Electronic History">
-      <div className="w-full max-w-none space-y-6">
+      <div className="space-y-4">
         <PageHeader
           title="Electronic History"
           description="Track electronic submissions and update clearance status."
           actions={
-            <Button className="w-full sm:w-auto" variant="outline" onClick={() => void handleExport()}>
-              <Download className="mr-2 h-4 w-4" />
+            <Button variant="outline" onClick={() => void handleExport()}>
+              <Download className="mr-1.5 h-3.5 w-3.5" />
               Export XLSX
             </Button>
           }
         />
 
-        <div className="w-full rounded-[18px] border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="md:hidden">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={() => setShowMobileFilters((prev) => !prev)}
-            >
-              <Filter className="mr-2 h-4 w-4" />
-              {showMobileFilters ? "Hide Filters" : "Show Filters"}
-            </Button>
-          </div>
+        <PaymentsTable
+          data={query.data?.results ?? []}
+          total={query.data?.count ?? 0}
+          page={page}
+          pageSize={pageSize}
+          ordering={ordering}
+          isLoading={query.isLoading}
+          isFetching={query.isFetching}
+          onPageChange={setPage}
+          onSortChange={handleSortChange}
+          editableStatus
+          showChequeColumns
+          showStatusColumn
+          emptyTitle="No electronic records"
+          emptyDescription="Electronic payment entries will appear here once recorded."
+          filters={
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="min-w-[180px] flex-1">
+                <SearchInput
+                  placeholder="Search invoice or DRA…"
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                />
+              </div>
 
-          <div className={`mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3 ${showMobileFilters ? "block" : "hidden md:grid"}`}>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">Start Date</label>
-              <DateInput
-                value={startDate}
-                onChange={(value) => {
-                  setPage(1);
-                  setStartDate(value);
-                }}
-                clearable
-                max={endDate || undefined}
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">End Date</label>
-              <DateInput
-                value={endDate}
-                onChange={(value) => {
-                  setPage(1);
-                  setEndDate(value);
-                }}
-                clearable
-                min={startDate || undefined}
-              />
-            </div>
-            <div className="flex items-end">
-              <Button
-                className="w-full sm:w-auto"
-                variant="outline"
-                onClick={() => {
-                  setStartDate("");
-                  setEndDate("");
-                  setPage(1);
-                }}
-              >
-                Reset Filters
-              </Button>
-            </div>
-          </div>
-        </div>
+              <div className="flex flex-col gap-1">
+                <Label className="text-[10px] text-[#9898B4]">Status</Label>
+                <Select
+                  value={chequeStatus}
+                  onValueChange={(v) => { setChequeStatus(v); setPage(1); }}
+                >
+                  <SelectTrigger className="h-8 w-[120px] text-[12px]">
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="cleared">Cleared</SelectItem>
+                    <SelectItem value="bounced">Bounced</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-        {query.isLoading ? (
-          <ResponsiveTableSkeleton />
-        ) : rows.length === 0 ? (
-          <EmptyState
-            icon={<FileClock className="h-6 w-6" />}
-            title="No electronic records"
-            description="Electronic payment entries will appear here once recorded."
-          />
-        ) : (
-          <div className="w-full">
-           <PaymentsTable
-            data={rows}
-            total={query.data?.count ?? 0}
-            page={page}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            showChequeColumns={false}
-            showStatusColumn={false}
-          />
-          </div>
-        )}
+              <div className="flex flex-col gap-1">
+                <Label className="text-[10px] text-[#9898B4]">From</Label>
+                <DateInput
+                  value={startDate}
+                  onChange={(v) => { setStartDate(v); setPage(1); }}
+                  clearable
+                  max={endDate || undefined}
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label className="text-[10px] text-[#9898B4]">To</Label>
+                <DateInput
+                  value={endDate}
+                  onChange={(v) => { setEndDate(v); setPage(1); }}
+                  clearable
+                  min={startDate || undefined}
+                />
+              </div>
+
+              {isDirty ? (
+                <Button variant="ghost" size="sm" onClick={reset}>
+                  Clear
+                </Button>
+              ) : null}
+            </div>
+          }
+        />
       </div>
-
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 p-3 backdrop-blur md:hidden">
-        <div className="mx-auto max-w-3xl">
-          <Button className="w-full" variant="outline" onClick={() => void handleExport()}>
-            <Download className="mr-2 h-4 w-4" />
-            Export XLSX
-          </Button>
-        </div>
-      </div>
-
-      <div className="h-20 md:hidden" />
     </AppShell>
   );
 }

@@ -8,6 +8,7 @@ export type Firm = "NA" | "MZ";
 export type BillStatus = "open" | "cleared" | "cancelled";
 export type InvoiceStatus = "draft" | "finalized" | "cancelled";
 export type InvoiceCreationMode = "bill_only" | "printable_only" | "printable_and_bill";
+export type StockMovementType = "in" | "out" | "adjustment";
 
 export interface User {
   id: number;
@@ -15,7 +16,9 @@ export interface User {
   full_name: string;
   email: string;
   role: UserRole;
-  is_active?: boolean;
+  // BUG FIX: is_active is now included in UserSerializer (login response),
+  // matching UserAdminSerializer. No longer needs to be optional.
+  is_active: boolean;
   is_admin: boolean;
 }
 
@@ -35,11 +38,76 @@ export interface Product {
   id: number;
   product_code: string;
   category: string;
+  category_id?: number | null;
+  category_name?: string | null;
   name: string;
   price: string;
   default_quantity: string;
   tax_rate: string;
   is_active: boolean;
+  created_at: string;
+}
+
+// Matches backend ProductCategorySerializer exactly:
+// fields = [id, name, description, is_active, created_at]
+export interface ProductCategory {
+  id: number;
+  name: string;
+  description: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+// Matches backend WarehouseSerializer exactly:
+// fields = [id, name, location, is_active, created_at]
+export interface Warehouse {
+  id: number;
+  name: string;
+  location: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface StockItem {
+  id: number;
+  product: number;
+  product_name: string;
+  product_code: string;
+  category_name: string | null;
+  warehouse: number;
+  warehouse_name: string;
+  quantity: string;
+  reorder_level: string;
+  is_low_stock: boolean;
+  updated_at: string;
+}
+
+export interface StockMovement {
+  id: number;
+  product: number;
+  product_name: string;
+  warehouse: number;
+  warehouse_name: string;
+  // BUG FIX: "adjustment" was missing from this union
+  movement_type: StockMovementType;
+  quantity: string;
+  note: string;
+  created_at: string;
+}
+
+export interface StockTransfer {
+  id: number;
+  source_warehouse: number;
+  source_warehouse_name: string;
+  destination_warehouse: number;
+  destination_warehouse_name: string;
+  product: number;
+  product_name: string;
+  product_code: string;
+  quantity: string;
+  note: string;
+  created_by: number | null;
+  created_by_username: string;
   created_at: string;
 }
 
@@ -209,6 +277,7 @@ export interface InvoiceReportListItem {
   id: number;
   invoice_number: string;
   invoice_date: string;
+  party_id?: number | null;
   customer_name: string;
   route_name: string;
   outlet_name: string;
@@ -228,6 +297,7 @@ export interface InvoiceReport {
   id: number;
   invoice_number: string;
   invoice_date: string;
+  party_id?: number | null;
   customer_name: string;
   customer_address: string;
   customer_phone: string;
@@ -251,9 +321,10 @@ export interface InvoiceReport {
 }
 
 export interface CreateInvoiceReportPayload {
-  invoice_number: string;
+  invoice_number?: string;
   invoice_date: string;
-  customer_name: string;
+  party_id?: number;
+  customer_name?: string;
   customer_address?: string;
   customer_phone?: string;
   gst_number?: string;

@@ -73,6 +73,13 @@ class BillRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             return [IsAdmin()]
         return [permissions.IsAuthenticated()]
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        if getattr(user, "role", None) == "dra":
+            queryset = queryset.filter(assigned_to=user, status=Bill.Status.OPEN)
+        return queryset
+
     def get_serializer_class(self):
         if self.request.method == "PATCH":
             return BillCreateUpdateSerializer

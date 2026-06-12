@@ -9,6 +9,7 @@ import {
   Receipt,
   Users,
   Wallet,
+  Warehouse,
   X,
   Zap,
 } from "lucide-react";
@@ -17,17 +18,24 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 
 const adminItems = [
-  { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/products", label: "Products", icon: Package },
-  { to: "/invoices/new", label: "Create Invoice", icon: FileText },
-  { to: "/invoices", label: "Invoice List", icon: FileText },
-  { to: "/admin/payments", label: "Payments", icon: Wallet },
-  { to: "/admin/cheques", label: "Cheques", icon: Receipt },
-  { to: "/admin/electronic", label: "Electronic", icon: FileClock },
-  { to: "/admin/users", label: "Users", icon: Users },
+  { to: "/admin",           label: "Dashboard",      icon: LayoutDashboard },
+  { to: "/products",        label: "Products",       icon: Package },
+  { to: "/stock",           label: "Warehousing",    icon: Warehouse },
+  { to: "/invoices/new",    label: "Create Invoice", icon: FileText },
+  { to: "/invoices",        label: "Invoice List",   icon: FileText },
+  { to: "/admin/payments",  label: "Payments",       icon: Wallet },
+  { to: "/admin/cheques",   label: "Cheques",        icon: Receipt },
+  { to: "/admin/electronic",label: "Electronic",     icon: FileClock },
+  { to: "/admin/users",     label: "Users",          icon: Users },
 ];
 
-const draItems = [{ to: "/dra", label: "Assigned Bills", icon: Landmark }];
+const draItems = [
+  { to: "/dra", label: "Assigned Bills", icon: Landmark },
+];
+
+const END_ROUTES = [
+  "/admin", "/dra", "/invoices", "/invoices/new", "/products", "/stock", "/admin/users",
+];
 
 export function AppSidebar({
   collapsed = false,
@@ -42,145 +50,109 @@ export function AppSidebar({
 }) {
   const { user, logout } = useAuth();
   const items = user?.role === "admin" ? adminItems : draItems;
-
-  const initials = user?.full_name?.trim().slice(0, 2).toUpperCase() || "DR";
-
-  const handleLogout = () => {
-    logout();
-    onClose?.();
-  };
+  const initials = user?.full_name?.trim().slice(0, 2).toUpperCase() ?? "DR";
+  const isCollapsed = collapsed && !mobile;
 
   return (
     <aside
       className={cn(
-        "shrink-0 flex-col border-r border-slate-200 bg-white/96 py-4 text-slate-700 backdrop-blur",
-        mobile ? "flex h-full w-full px-3" : "hidden md:flex",
-        collapsed && !mobile ? "w-[88px] px-3" : "w-[220px] px-3"
+        "flex shrink-0 flex-col border-r border-[#DFE1F0] bg-white py-3",
+        mobile ? "h-full w-full px-2.5" : "hidden md:flex",
+        isCollapsed ? "w-[56px] px-2" : "w-[192px] px-2.5",
       )}
     >
-      <div className={cn("mb-5", collapsed && !mobile ? "px-0" : "px-1")}>
+      {/* Logo */}
+      <div className={cn("mb-4", isCollapsed ? "flex justify-center" : "")}>
         <div
           className={cn(
-            "rounded-2xl border border-slate-100 bg-white p-3 shadow-sm",
-            collapsed && !mobile
-              ? "flex justify-center px-2 py-4"
-              : "flex items-center justify-between gap-3"
+            "flex items-center gap-2.5 rounded-[14px] border border-[#DFE1F0] bg-[#F6F7FC] p-2.5",
+            isCollapsed ? "justify-center" : "justify-between",
           )}
         >
-          <div
-            className={cn(
-              "flex min-w-0 items-center gap-3",
-              collapsed && !mobile ? "justify-center" : ""
-            )}
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#7dd3fc,#38bdf8,#0ea5e9)] text-white shadow-[0_8px_20px_rgba(56,189,248,0.25)]">
-              <Zap className="h-5 w-5" />
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[#6F72BE]">
+              <Zap className="h-4 w-4 text-white" />
             </div>
-
-            {!(collapsed && !mobile) ? (
+            {!isCollapsed && (
               <div className="min-w-0">
-                <p className="truncate text-[15px] font-bold tracking-tight text-sky-900">
-                  Debt Recovery
-                </p>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  Portal
-                </p>
+                <p className="truncate text-[13px] font-bold text-[#1E1E30]">Debt Recovery</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9898B4]">Portal</p>
               </div>
-            ) : null}
+            )}
           </div>
-
-          {mobile ? (
+          {mobile && (
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 shadow-sm transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700"
-              aria-label="Close sidebar"
+              className="rounded-[8px] border border-[#DFE1F0] p-1.5 text-[#6B6B8A] hover:bg-[#EAEBF8] hover:text-[#6F72BE]"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </button>
-          ) : null}
+          )}
         </div>
       </div>
 
-      <div className="px-1 pb-2">
-        {!(collapsed && !mobile) ? (
-          <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-            Main
-          </p>
-        ) : null}
+      {/* Nav label */}
+      {!isCollapsed && (
+        <p className="mb-1.5 px-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#9898B4]">
+          Main
+        </p>
+      )}
 
-        <nav className="space-y-1.5">
-          {items.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={
-                to === "/admin" ||
-                to === "/dra" ||
-                to === "/invoices" ||
-                to === "/invoices/new" ||
-                to === "/products" ||
-                to === "/admin/users"
-              }
-              onClick={onNavigate}
-              className={({ isActive }) =>
-                cn(
-                  "rounded-xl text-[13.5px] font-medium transition-all",
-                  collapsed && !mobile
-                    ? "flex h-11 items-center justify-center px-0"
-                    : "flex items-center gap-3 px-3 py-2.5",
-                  isActive
-                    ? "bg-[linear-gradient(135deg,#e0f2fe,#bae6fd)] text-sky-800 shadow-sm"
-                    : "text-slate-500 hover:bg-sky-50 hover:text-sky-700"
-                )
-              }
-              title={collapsed && !mobile ? label : undefined}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              {!(collapsed && !mobile) ? (
-                <span className="truncate">{label}</span>
-              ) : null}
-            </NavLink>
-          ))}
-        </nav>
-      </div>
+      {/* Nav items */}
+      <nav className="flex-1 space-y-0.5 overflow-y-auto">
+        {items.map(({ to, label, icon: Icon }) => (
+          <NavLink
+            key={`${to}-${label}`}
+            to={to}
+            end={END_ROUTES.includes(to)}
+            onClick={onNavigate}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center rounded-[8px] text-[12.5px] font-medium transition-colors",
+                isCollapsed ? "h-8 w-8 justify-center" : "gap-2.5 px-2.5 py-1.5",
+                isActive
+                  ? "bg-[#EAEBF8] text-[#6F72BE]"
+                  : "text-[#6B6B8A] hover:bg-[#F6F7FC] hover:text-[#6F72BE]",
+              )
+            }
+            title={isCollapsed ? label : undefined}
+          >
+            <Icon className="h-3.5 w-3.5 shrink-0" />
+            {!isCollapsed && <span className="truncate">{label}</span>}
+          </NavLink>
+        ))}
+      </nav>
 
+      {/* User footer */}
       <div
         className={cn(
-          "mt-auto rounded-2xl border border-slate-100 bg-slate-50 text-sm shadow-sm",
-          collapsed && !mobile ? "p-2" : "p-3"
+          "mt-3 rounded-[12px] border border-[#DFE1F0] bg-[#F6F7FC]",
+          isCollapsed ? "p-1.5" : "p-2.5",
         )}
       >
-        {!(collapsed && !mobile) ? (
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#7dd3fc,#0ea5e9)] text-xs font-bold text-white">
+        {!isCollapsed && (
+          <div className="mb-2 flex items-center gap-2">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#6F72BE] text-[11px] font-bold text-white">
               {initials}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-[13px] font-semibold text-slate-700">
-                {user?.full_name}
-              </p>
-              <p className="truncate text-[11px] text-slate-400">
-                {user?.username}
-              </p>
+              <p className="truncate text-[12px] font-semibold text-[#1E1E30]">{user?.full_name}</p>
+              <p className="truncate text-[10px] text-[#9898B4]">{user?.username}</p>
             </div>
           </div>
-        ) : null}
-
+        )}
         <button
           type="button"
-          onClick={handleLogout}
+          onClick={() => { logout(); onClose?.(); }}
           className={cn(
-            "mt-3 flex w-full rounded-xl text-slate-500 transition hover:bg-white hover:text-sky-700",
-            collapsed && !mobile
-              ? "justify-center p-2"
-              : "items-center gap-2 px-2 py-2"
+            "flex w-full items-center rounded-[8px] text-[12px] text-[#6B6B8A] transition-colors hover:bg-white hover:text-[#E04E6A]",
+            isCollapsed ? "justify-center p-1.5" : "gap-2 px-2 py-1.5",
           )}
-          title={collapsed && !mobile ? "Sign out" : undefined}
-          aria-label="Sign out"
+          title={isCollapsed ? "Sign out" : undefined}
         >
-          <LogOut className="h-4 w-4 shrink-0" />
-          {!(collapsed && !mobile) ? <span>Sign out</span> : null}
+          <LogOut className="h-3.5 w-3.5 shrink-0" />
+          {!isCollapsed && <span>Sign out</span>}
         </button>
       </div>
     </aside>

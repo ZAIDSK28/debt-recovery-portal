@@ -1,3 +1,4 @@
+// src/hooks/usePayments.ts
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getPaymentsApi,
@@ -28,6 +29,8 @@ export function useRecordPayment() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.todayTotals });
       void queryClient.invalidateQueries({ queryKey: ["daily-summary"] });
       void queryClient.invalidateQueries({ queryKey: ["payments"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard-daily-collections"] });
     },
   });
 }
@@ -44,6 +47,8 @@ export function useUpdatePaymentStatus() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.todayTotals });
       void queryClient.invalidateQueries({ queryKey: ["daily-summary"] });
       void queryClient.invalidateQueries({ queryKey: ["my-assignments"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard-daily-collections"] });
     },
   });
 }

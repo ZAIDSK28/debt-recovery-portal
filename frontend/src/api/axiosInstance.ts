@@ -1,3 +1,4 @@
+// src/api/axiosInstance.ts
 import axios, { AxiosError, AxiosHeaders, type InternalAxiosRequestConfig } from "axios";
 
 const API_URL = import.meta.env.VITE_API_URL as string;
@@ -6,6 +7,7 @@ export const ACCESS_KEY = "drp_access";
 export const REFRESH_KEY = "drp_refresh";
 export const USER_KEY = "drp_user";
 export const PENDING_OTP_KEY = "drp_pending_otp_username";
+export const REQUEST_ID_HEADER = "x-request-id";
 
 export function getStoredAccessToken(): string | null {
   return localStorage.getItem(ACCESS_KEY);
@@ -49,6 +51,29 @@ function redirectToLogin(): void {
   }
 }
 
+function createRequestId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `req_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function readResponseRequestId(error: unknown): string | null {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof (error as { response?: unknown }).response === "object" &&
+    (error as { response?: { headers?: Record<string, string | undefined> } }).response?.headers
+  ) {
+    const headers = (error as { response?: { headers?: Record<string, string | undefined> } }).response?.headers;
+    return headers?.[REQUEST_ID_HEADER] ?? headers?.["X-Request-ID"] ?? null;
+  }
+
+  return null;
+}
+
 export const axiosInstance = axios.create({
   baseURL: API_URL,
 });
@@ -56,8 +81,13 @@ export const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = getStoredAccessToken();
 
+  config.headers = config.headers ?? new AxiosHeaders();
+
+  if (!config.headers.has("X-Request-ID")) {
+    config.headers.set("X-Request-ID", createRequestId());
+  }
+
   if (token) {
-    config.headers = config.headers ?? new AxiosHeaders();
     config.headers.set("Authorization", `Bearer ${token}`);
   }
 
@@ -71,6 +101,10 @@ axiosInstance.interceptors.response.use(
     const requestUrl = originalRequest?.url ?? "";
 
     if (error.response?.status !== 401 || !originalRequest || originalRequest._retry) {
+      const requestId = readResponseRequestId(error);
+      if (requestId && typeof console !== "undefined") {
+        console.error("API request failed", { requestId, url: requestUrl, status: error.response?.status });
+      }
       return Promise.reject(error);
     }
 

@@ -1,12 +1,12 @@
-# debt_recovery_portal/settings.py
-
 from __future__ import annotations
 
 import os
 from datetime import timedelta
 from pathlib import Path
 
+from corsheaders.defaults import default_headers
 from dotenv import load_dotenv
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
@@ -77,6 +77,8 @@ if DB_ENGINE == "postgres":
             "PASSWORD": os.getenv("DB_PASSWORD", ""),
             "HOST": os.getenv("DB_HOST", "localhost"),
             "PORT": os.getenv("DB_PORT", "5432"),
+            "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "60")),
+            "CONN_HEALTH_CHECKS": os.getenv("DB_CONN_HEALTH_CHECKS", "True").lower() == "true",
         }
     }
 else:
@@ -112,12 +114,16 @@ CORS_ALLOWED_ORIGINS = [
 
 ]
 
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "x-request-id",
+]
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://zaidshaikh28.pythonanywhere.com",
     "https://debt-recovery-portal-backend.onrender.com"
 ]
+
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (

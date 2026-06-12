@@ -1,3 +1,4 @@
+// src/components/bills/delete-bill-dialog.tsx
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -29,7 +30,7 @@ export function DeleteBillDialog({
 
     try {
       await deleteMutation.mutateAsync(billId);
-      toast.success("Invoice deleted");
+      toast.success("Bill deleted");
       onOpenChange(false);
     } catch (error) {
       toast.error(getApiError(error));
@@ -40,9 +41,9 @@ export function DeleteBillDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete invoice?</AlertDialogTitle>
+          <AlertDialogTitle>Delete bill?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. The selected invoice will be removed permanently.
+            This action cannot be undone. The selected bill will be removed permanently.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
