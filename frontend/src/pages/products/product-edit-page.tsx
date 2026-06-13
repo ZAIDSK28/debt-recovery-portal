@@ -19,14 +19,14 @@ export default function ProductEditPage() {
 
   if (!Number.isFinite(productId)) {
     return (
-      <AppShell title="Edit Product">
+      <AppShell >
         <EmptyState title="Invalid product" description="The requested product id is invalid." />
       </AppShell>
     );
   }
 
   return (
-    <AppShell title="Edit Product">
+    <AppShell >
       <div className="space-y-5">
         <PageHeader
           title="Edit Product"

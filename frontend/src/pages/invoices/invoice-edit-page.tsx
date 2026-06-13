@@ -29,14 +29,14 @@ export default function InvoiceEditPage() {
 
   if (!Number.isFinite(invoiceId)) {
     return (
-      <AppShell title="Edit Invoice">
+      <AppShell >
         <EmptyState title="Invalid invoice" description="The requested invoice id is invalid." />
       </AppShell>
     );
   }
 
   return (
-    <AppShell title="Edit Invoice">
+    <AppShell >
       <div className="space-y-5">
         <PageHeader
           title="Edit Invoice"

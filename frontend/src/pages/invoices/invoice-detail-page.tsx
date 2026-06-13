@@ -74,7 +74,7 @@ export default function InvoiceDetailPage() {
 
   if (!Number.isFinite(invoiceId)) {
     return (
-      <AppShell title="Invoice Detail">
+      <AppShell >
         <EmptyState title="Invalid invoice" description="The requested invoice id is invalid." />
       </AppShell>
     );
@@ -83,7 +83,7 @@ export default function InvoiceDetailPage() {
   const invoice = query.data;
 
   return (
-    <AppShell title="Invoice Detail">
+    <AppShell >
       <div className="space-y-5">
         <PageHeader
           title={invoice ? `Invoice ${invoice.invoice_number}` : "Invoice Detail"}

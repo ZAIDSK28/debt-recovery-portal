@@ -106,7 +106,7 @@ export default function DRADashboardPage() {
   ];
 
   return (
-    <AppShell title="DRA Dashboard">
+    <AppShell >
       <div className="space-y-5">
         <PageHeader
           title="Assigned Invoices"

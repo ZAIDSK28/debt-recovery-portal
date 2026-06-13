@@ -19,14 +19,14 @@ export default function AdminUserEditPage() {
 
   if (!Number.isFinite(userId)) {
     return (
-      <AppShell title="Edit User">
+      <AppShell >
         <EmptyState title="Invalid user" description="The requested user id is invalid." />
       </AppShell>
     );
   }
 
   return (
-    <AppShell title="Edit User">
+    <AppShell >
       <div className="space-y-5">
         <PageHeader
           title="Edit User"

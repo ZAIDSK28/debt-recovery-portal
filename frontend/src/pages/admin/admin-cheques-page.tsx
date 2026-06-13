@@ -85,7 +85,7 @@ export default function AdminChequesPage() {
   }
 
   return (
-    <AppShell title="Cheque History">
+    <AppShell>
       <div className="space-y-4">
         <PageHeader
           title="Cheque History"

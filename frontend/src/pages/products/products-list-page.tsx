@@ -143,7 +143,7 @@ export default function ProductsListPage() {
   ];
 
   return (
-    <AppShell title="Products">
+    <AppShell >
       <div className="space-y-4">
         <PageHeader
           title="Products"

@@ -224,7 +224,7 @@ export default function InvoicesListPage() {
   ];
 
   return (
-    <AppShell title="Invoices">
+    <AppShell >
       <div className="space-y-4">
         <PageHeader
           title="Invoice List"

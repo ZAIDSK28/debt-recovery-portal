@@ -85,7 +85,7 @@ export default function AdminElectronicPage() {
   }
 
   return (
-    <AppShell title="Electronic History">
+    <AppShell >
       <div className="space-y-4">
         <PageHeader
           title="Electronic History"

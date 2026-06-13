@@ -73,7 +73,7 @@ export default function AdminPaymentsPage() {
   }
 
   return (
-    <AppShell title="Payments">
+    <AppShell >
       <div className="space-y-4">
         <PageHeader
           title="Payment History"

@@ -106,7 +106,7 @@ export default function AdminDashboardPage() {
   const kpis = summaryQuery.data;
 
   return (
-    <AppShell title="Admin Dashboard">
+    <AppShell>
       <div className="space-y-6">
         <PageHeader
           title="Collections Overview"

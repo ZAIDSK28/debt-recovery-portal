@@ -43,7 +43,7 @@ export default function CreateInvoicePage() {
   }
 
   return (
-    <AppShell title="Create Invoice">
+    <AppShell >
       <div className="space-y-5">
         <PageHeader
           title="Create Invoice"

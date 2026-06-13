@@ -8,7 +8,7 @@ export default function AdminUserCreatePage() {
   const navigate = useNavigate();
 
   return (
-    <AppShell title="Create User">
+    <AppShell>
       <div className="space-y-5">
         <PageHeader
           title="Create User"

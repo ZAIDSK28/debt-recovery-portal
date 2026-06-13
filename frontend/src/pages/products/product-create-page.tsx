@@ -8,7 +8,7 @@ export default function ProductCreatePage() {
   const navigate = useNavigate();
 
   return (
-    <AppShell title="Create Product">
+    <AppShell >
       <div className="space-y-5">
         <PageHeader
           title="Create Product"
