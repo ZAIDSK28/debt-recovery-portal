@@ -1,5 +1,4 @@
 // src/pages/error-page.tsx
-
 import { AlertTriangle, ArrowLeft, RefreshCw } from "lucide-react";
 import { isRouteErrorResponse, useNavigate, useRouteError } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -22,22 +21,24 @@ export default function ErrorPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
-      <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-500">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-100 px-4 py-10">
+      <div className="w-full max-w-lg rounded-xl border border-gray-200 bg-white p-8 text-center shadow-lg">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-red-500">
           <AlertTriangle className="h-7 w-7" />
         </div>
 
-        <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
-        <p className="mt-2 text-sm text-slate-500">{description}</p>
+        <h1 className="font-heading text-2xl font-extrabold tracking-tight text-gray-900">
+          {title}
+        </h1>
+        <p className="mt-2 text-sm text-gray-500">{description}</p>
 
         <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-          <Button variant="outline" onClick={() => navigate(-1)}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
+          <Button variant="outline" onClick={() => navigate(-1)} className="h-9 gap-1.5 text-sm">
+            <ArrowLeft className="h-4 w-4" />
             Go Back
           </Button>
-          <Button onClick={() => window.location.reload()}>
-            <RefreshCw className="mr-2 h-4 w-4" />
+          <Button onClick={() => window.location.reload()} className="h-9 gap-1.5 text-sm">
+            <RefreshCw className="h-4 w-4" />
             Reload
           </Button>
         </div>

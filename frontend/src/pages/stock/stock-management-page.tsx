@@ -126,7 +126,7 @@ function StockTransfersTab() {
 export default function StockManagementPage() {
   const [activeTab, setActiveTab] = useState<Tab>("levels");
   return (
-    <AppShell title="Stock / Warehousing">
+    <AppShell>
       <div className="space-y-5">
         <PageHeader title="Stock / Warehousing" description="Track on-hand quantities, record movements, and transfer stock between warehouses." />
         <div className="flex w-fit gap-1 rounded-[14px] border border-[#DFE1F0] bg-[#F6F7FC] p-1 shadow-[0_2px_8px_rgba(30,30,48,0.06)]">

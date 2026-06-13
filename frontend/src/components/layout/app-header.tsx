@@ -1,12 +1,10 @@
 import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 export function AppHeader({
-  title,
   onMenuClick,
   onSidebarToggle,
   isSidebarCollapsed,
 }: {
-  title: string;
   onMenuClick?: () => void;
   onSidebarToggle?: () => void;
   isSidebarCollapsed?: boolean;
@@ -37,10 +35,6 @@ export function AppHeader({
             <PanelLeftClose className="h-4.5 w-4.5" />
           )}
         </button>
-
-        <h1 className="truncate text-sm font-semibold text-gray-900 sm:text-base">
-          {title}
-        </h1>
       </div>
     </header>
   );

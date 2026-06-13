@@ -2,7 +2,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { Download, Eye, FileText, Pencil, Plus, Printer, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/page-header";
 import { SearchInput } from "@/components/common/search-input";
@@ -10,6 +10,7 @@ import { DataTable, type DataTableColumn } from "@/components/common/data-table"
 import { InvoiceStatusBadge } from "@/components/common/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
+import { DeleteInvoiceDialog } from "@/components/invoices/delete-invoice-dialog";
 import { downloadInvoicePdfApi, getPrintableInvoiceHtmlApi } from "@/api/invoices.api";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useDeleteInvoiceReport, useInvoiceReports } from "@/hooks/useInvoices";
@@ -68,6 +69,8 @@ export default function InvoicesListPage() {
   const pageSize = 20;
   const [search, setSearch] = useState("");
   const [ordering, setOrdering] = useState<string | undefined>("-created_at");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<InvoiceReportListItem | null>(null);
   const debouncedSearch = useDebounce(search, 400);
   const deleteMutation = useDeleteInvoiceReport();
 
@@ -105,15 +108,24 @@ export default function InvoicesListPage() {
     }
   }
 
-  async function handleDelete(id: number) {
-    if (!window.confirm("Deleting this invoice will also delete its linked bill and all related payments. This cannot be undone.")) return;
+  const confirmDelete = (invoice: InvoiceReportListItem) => {
+    setInvoiceToDelete(invoice);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirmed = async () => {
+    if (!invoiceToDelete) return;
     try {
-      await deleteMutation.mutateAsync(id);
+      await deleteMutation.mutateAsync(invoiceToDelete.id);
       toast.success("Invoice deleted");
+      setDeleteDialogOpen(false);
+      setInvoiceToDelete(null);
+      // Refresh the list
+      await query.refetch();
     } catch (err) {
       toast.error(getApiError(err));
     }
-  }
+  };
 
   const columns: DataTableColumn<InvoiceReportListItem>[] = [
     {
@@ -205,7 +217,7 @@ export default function InvoicesListPage() {
           onEdit={() => navigate(`/invoices/${r.id}/edit`, { state: { lockTrackerEnabled: true } })}
           onPrint={() => void handlePrint(r.id, r.invoice_number)}
           onPdf={() => void handlePdf(r.id, r.invoice_number)}
-          onDelete={() => void handleDelete(r.id)}
+          onDelete={() => confirmDelete(r)}
         />
       ),
     },
@@ -258,6 +270,13 @@ export default function InvoicesListPage() {
               }
             />
           }
+        />
+
+        <DeleteInvoiceDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          invoiceId={invoiceToDelete?.id ?? null}
+          onDeleted={handleDeleteConfirmed}
         />
       </div>
     </AppShell>

@@ -11,8 +11,6 @@ import {
   Warehouse,
   X,
   Zap,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -41,7 +39,7 @@ const END_ROUTES = [
 interface AppSidebarProps {
   collapsed?: boolean;
   mobile?: boolean;
-  onSidebarToggle?: () => void;
+  onSidebarToggle?: () => void;   // ✅ Added to fix the error
   onNavigate?: () => void;
   onClose?: () => void;
 }
@@ -49,7 +47,7 @@ interface AppSidebarProps {
 export function AppSidebar({
   collapsed = false,
   mobile = false,
-  onSidebarToggle,
+  onSidebarToggle,   // destructured but not used (toggle is in header)
   onNavigate,
   onClose,
 }: AppSidebarProps) {
@@ -68,15 +66,15 @@ export function AppSidebar({
     <aside
       className={cn(
         "flex shrink-0 flex-col border-r border-gray-200 bg-white py-3 transition-all duration-300",
-        mobile ? "h-full w-full px-2.5" : "hidden md:flex",
-        isCollapsed ? "w-[64px] px-2" : "w-[240px] px-2.5",
+        mobile ? "h-full w-full" : "hidden md:flex",
+        isCollapsed ? "w-[64px]" : "w-[240px]",
       )}
     >
-      {/* Logo + toggle area */}
-      <div className={cn("mb-4", isCollapsed ? "flex justify-center" : "")}>
+      {/* Logo area */}
+      <div className={cn("mb-4", isCollapsed ? "flex justify-center px-2" : "px-2.5")}>
         <div
           className={cn(
-            "relative flex items-center gap-2.5 rounded-xl border border-gray-200 bg-gray-50 p-2.5",
+            "flex items-center gap-2.5 rounded-xl border border-gray-200 bg-gray-50 p-2.5",
             isCollapsed ? "justify-center" : "justify-between",
           )}
         >
@@ -91,16 +89,6 @@ export function AppSidebar({
               </div>
             )}
           </div>
-          {/* Desktop collapse toggle */}
-          {!mobile && onSidebarToggle && (
-            <button
-              type="button"
-              onClick={onSidebarToggle}
-              className="rounded-lg border border-gray-200 p-1 text-gray-500 hover:bg-gray-100 hover:text-[#6F72BE]"
-            >
-              {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
-            </button>
-          )}
           {/* Mobile close button */}
           {mobile && onClose && (
             <button
@@ -116,13 +104,13 @@ export function AppSidebar({
 
       {/* Nav label */}
       {!isCollapsed && (
-        <p className="mb-1.5 px-1.5 text-[10px] font-bold uppercase tracking-wide text-gray-500">
+        <p className="mb-1.5 px-2.5 text-[10px] font-bold uppercase tracking-wide text-gray-500">
           Main
         </p>
       )}
 
-      {/* Nav items */}
-      <nav className="flex-1 space-y-0.5 overflow-y-auto">
+      {/* Nav items – full width active state */}
+      <nav className="flex-1 space-y-0.5 overflow-y-auto px-0">
         {items.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={`${to}-${label}`}
@@ -131,11 +119,13 @@ export function AppSidebar({
             onClick={onNavigate}
             className={({ isActive }) =>
               cn(
-                "flex items-center rounded-lg text-sm font-medium transition-colors",
-                isCollapsed ? "h-9 w-9 justify-center" : "gap-2.5 px-2.5 py-1.5",
-                isActive
-                  ? "bg-[#EAEBF8] text-[#6F72BE]"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-[#6F72BE]",
+                "flex items-center text-sm font-medium transition-colors",
+                isCollapsed ? "h-9 w-9 justify-center rounded-lg" : "gap-2.5 py-1.5",
+                !isCollapsed && "mx-0 px-2.5",
+                isActive && !isCollapsed && "bg-[#EAEBF8] text-[#6F72BE] relative",
+                !isActive && !isCollapsed && "text-gray-600 hover:bg-gray-100 hover:text-[#6F72BE] rounded-lg",
+                isActive && !isCollapsed && "rounded-none",
+                isCollapsed && "rounded-lg",
               )
             }
             title={isCollapsed ? label : undefined}
@@ -150,7 +140,7 @@ export function AppSidebar({
       <div
         className={cn(
           "mt-3 rounded-xl border border-gray-200 bg-gray-50",
-          isCollapsed ? "p-1.5" : "p-2.5",
+          isCollapsed ? "p-1.5 mx-2" : "p-2.5 mx-2.5",
         )}
       >
         {!isCollapsed && (

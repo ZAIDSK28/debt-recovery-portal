@@ -1,5 +1,5 @@
 // src/components/payments/cheque-status-select.tsx
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   Select,
   SelectContent,

@@ -2,7 +2,7 @@
 import { useCallback, useState } from "react";
 import { ArrowLeft, Download, Pencil, Printer, Trash2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/page-header";
 import { InvoiceStatusBadge } from "@/components/common/status-badge";

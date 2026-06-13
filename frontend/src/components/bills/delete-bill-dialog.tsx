@@ -1,5 +1,5 @@
 // src/components/bills/delete-bill-dialog.tsx
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   AlertDialog,
   AlertDialogAction,

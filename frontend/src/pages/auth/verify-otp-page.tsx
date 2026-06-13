@@ -1,6 +1,8 @@
+// src/pages/auth/verify-otp-page.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
@@ -106,10 +108,12 @@ export default function VerifyOtpPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,rgba(186,230,253,0.95),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#f0f9ff_100%)] px-4 py-10">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-gray-50 via-white to-gray-100 px-4 py-10">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(111,114,190,0.05),transparent_40%)]" />
+
       <Card
         className={cn(
-          "w-full max-w-md border-white/70 shadow-[0_20px_50px_rgba(14,165,233,0.14)] transition-all",
+          "relative w-full max-w-md border border-gray-200 bg-white/90 shadow-xl shadow-gray-200/30 backdrop-blur-sm transition-all",
           shake && "animate-shake"
         )}
       >
@@ -136,14 +140,25 @@ export default function VerifyOtpPage() {
                 inputMode="numeric"
                 autoComplete={index === 0 ? "one-time-code" : undefined}
                 maxLength={1}
-                className="h-14 w-12 rounded-xl border border-gray-200 bg-white/90 text-center font-heading text-xl font-bold text-gray-800 shadow-sm outline-none transition-all duration-150 focus:border-sky-300 focus:ring-2 focus:ring-sky-200/60"
+                className="h-14 w-12 rounded-xl border border-gray-200 bg-white text-center font-heading text-xl font-bold text-gray-800 shadow-sm outline-none transition-all duration-150 focus:border-[#6F72BE] focus:ring-2 focus:ring-[#6F72BE]/30"
                 aria-label={`OTP digit ${index + 1}`}
               />
             ))}
           </div>
 
-          <Button className="w-full" onClick={handleVerify} disabled={isSubmitting}>
-            {isSubmitting ? "Verifying..." : "Verify OTP"}
+          <Button
+            className="h-9 w-full gap-2 text-sm"
+            onClick={handleVerify}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin text-[#6F72BE]" />
+                Verifying...
+              </>
+            ) : (
+              "Verify OTP"
+            )}
           </Button>
 
           <div className="text-center text-sm">
@@ -153,7 +168,7 @@ export default function VerifyOtpPage() {
               <button
                 type="button"
                 onClick={handleResend}
-                className="font-semibold text-sky-600 transition hover:text-sky-700"
+                className="font-semibold text-[#6F72BE] transition hover:text-[#5D60A8]"
               >
                 Resend OTP
               </button>
@@ -162,7 +177,6 @@ export default function VerifyOtpPage() {
         </CardContent>
       </Card>
 
-      {/* Add shake animation if not already present in globals */}
       <style>{`
         @keyframes shake {
           0%, 100% { transform: translateX(0); }

@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -99,42 +99,68 @@ export function UserForm({
 
   return (
     <form className="grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={form.handleSubmit(onSubmit)}>
-      <div className="space-y-2">
-        <Label htmlFor="username">Username</Label>
-        <Input id="username" {...form.register("username")} disabled={isEditMode} />
-        {form.formState.errors.username ? (
-          <p className="text-sm text-red-500">{form.formState.errors.username.message}</p>
-        ) : null}
+      <div className="space-y-1.5">
+        <Label htmlFor="username" className="text-sm font-semibold text-gray-700">
+          Username
+        </Label>
+        <Input
+          id="username"
+          {...form.register("username")}
+          disabled={isEditMode}
+          className="h-9 text-sm"
+        />
+        {form.formState.errors.username && (
+          <p className="text-xs text-red-500">{form.formState.errors.username.message}</p>
+        )}
       </div>
 
-      {!isEditMode ? (
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" {...form.register("password")} />
-          {form.formState.errors.password ? (
-            <p className="text-sm text-red-500">{form.formState.errors.password.message}</p>
-          ) : null}
+      {!isEditMode && (
+        <div className="space-y-1.5">
+          <Label htmlFor="password" className="text-sm font-semibold text-gray-700">
+            Password
+          </Label>
+          <Input
+            id="password"
+            type="password"
+            {...form.register("password")}
+            className="h-9 text-sm"
+          />
+          {form.formState.errors.password && (
+            <p className="text-xs text-red-500">{form.formState.errors.password.message}</p>
+          )}
         </div>
-      ) : null}
+      )}
 
-      <div className="space-y-2">
-        <Label htmlFor="full_name">Full Name</Label>
-        <Input id="full_name" {...form.register("full_name")} />
-        {form.formState.errors.full_name ? (
-          <p className="text-sm text-red-500">{form.formState.errors.full_name.message}</p>
-        ) : null}
+      <div className="space-y-1.5">
+        <Label htmlFor="full_name" className="text-sm font-semibold text-gray-700">
+          Full Name
+        </Label>
+        <Input
+          id="full_name"
+          {...form.register("full_name")}
+          className="h-9 text-sm"
+        />
+        {form.formState.errors.full_name && (
+          <p className="text-xs text-red-500">{form.formState.errors.full_name.message}</p>
+        )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" {...form.register("email")} />
-        {form.formState.errors.email ? (
-          <p className="text-sm text-red-500">{form.formState.errors.email.message}</p>
-        ) : null}
+      <div className="space-y-1.5">
+        <Label htmlFor="email" className="text-sm font-semibold text-gray-700">
+          Email (optional)
+        </Label>
+        <Input
+          id="email"
+          {...form.register("email")}
+          className="h-9 text-sm"
+        />
+        {form.formState.errors.email && (
+          <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>
+        )}
       </div>
 
-      <div className="space-y-2">
-        <Label>Role</Label>
+      <div className="space-y-1.5">
+        <Label className="text-sm font-semibold text-gray-700">Role</Label>
         <Select
           value={roleValue}
           onValueChange={(value) =>
@@ -145,18 +171,18 @@ export function UserForm({
             })
           }
         >
-          <SelectTrigger>
+          <SelectTrigger className="h-9 text-sm">
             <SelectValue placeholder="Select role" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="admin">Admin</SelectItem>
-            <SelectItem value="dra">DRA</SelectItem>
+            <SelectItem value="admin" className="text-sm">Admin</SelectItem>
+            <SelectItem value="dra" className="text-sm">DRA</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      <div className="space-y-2">
-        <Label>Active Status</Label>
+      <div className="space-y-1.5">
+        <Label className="text-sm font-semibold text-gray-700">Active Status</Label>
         <Select
           value={activeValue}
           onValueChange={(value) =>
@@ -167,18 +193,22 @@ export function UserForm({
             })
           }
         >
-          <SelectTrigger>
+          <SelectTrigger className="h-9 text-sm">
             <SelectValue placeholder="Select status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="true">Active</SelectItem>
-            <SelectItem value="false">Inactive</SelectItem>
+            <SelectItem value="true" className="text-sm">Active</SelectItem>
+            <SelectItem value="false" className="text-sm">Inactive</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       <div className="flex justify-end md:col-span-2">
-        <Button type="submit" disabled={isSubmitting}>
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="h-9 gap-1.5 text-sm"
+        >
           {isSubmitting ? "Saving..." : isEditMode ? "Save Changes" : "Create User"}
         </Button>
       </div>

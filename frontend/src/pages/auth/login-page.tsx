@@ -1,5 +1,6 @@
+// src/pages/auth/login-page.tsx
 import { useState } from "react";
-import { Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -48,14 +49,13 @@ export default function LoginPage() {
     }
   }
 
-  return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
-      {/* Subtle radial gradient background - neutral with purple undertone */}
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-white to-gray-100/50" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(111,114,190,0.08),transparent_40%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_70%,rgba(111,114,190,0.05),transparent_50%)]" />
+  const isSubmitting = form.formState.isSubmitting;
 
-      <Card className="relative w-full max-w-md border border-gray-200/80 bg-white/90 shadow-xl shadow-gray-200/30 backdrop-blur-sm">
+  return (
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-gray-50 via-white to-gray-100 px-4 py-10">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(111,114,190,0.05),transparent_40%)]" />
+
+      <Card className="relative w-full max-w-md border border-gray-200 bg-white/90 shadow-xl shadow-gray-200/30 backdrop-blur-sm">
         <CardHeader className="items-center text-center">
           <div className="mb-5 rounded-2xl bg-[#6F72BE] p-3.5 text-white shadow-md shadow-[#6F72BE]/20">
             <ShieldCheck className="h-7 w-7" />
@@ -81,7 +81,7 @@ export default function LoginPage() {
                 {...form.register("username")}
               />
               {form.formState.errors.username && (
-                <p className="text-sm text-red-500">{form.formState.errors.username.message}</p>
+                <p className="text-xs text-red-500">{form.formState.errors.username.message}</p>
               )}
             </div>
 
@@ -108,12 +108,23 @@ export default function LoginPage() {
                 </button>
               </div>
               {form.formState.errors.password && (
-                <p className="text-sm text-red-500">{form.formState.errors.password.message}</p>
+                <p className="text-xs text-red-500">{form.formState.errors.password.message}</p>
               )}
             </div>
 
-            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? "Signing in..." : "Sign In"}
+            <Button
+              type="submit"
+              className="h-9 w-full gap-2 text-sm"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin text-[#6F72BE]" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign In"
+              )}
             </Button>
           </form>
         </CardContent>

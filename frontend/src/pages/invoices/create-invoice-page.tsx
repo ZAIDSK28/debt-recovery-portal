@@ -4,7 +4,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/page-header";
 import { InvoiceForm } from "@/components/invoices/invoice-form";
 import { downloadInvoicePdfApi, getPrintableInvoiceHtmlApi } from "@/api/invoices.api";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { downloadBlob, getApiError } from "@/lib/utils";
 
 export default function CreateInvoicePage() {

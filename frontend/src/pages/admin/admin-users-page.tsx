@@ -2,7 +2,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { KeyRound, Pencil, Plus, Shield, ShieldOff, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/page-header";
 import { SearchInput } from "@/components/common/search-input";
@@ -151,7 +151,7 @@ export default function AdminUsersPage() {
   ];
 
   return (
-    <AppShell title="Users">
+    <AppShell>
       <div className="space-y-4">
         <PageHeader
           title="Users"

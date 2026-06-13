@@ -1,6 +1,6 @@
 // src/components/bills/import-bills-dialog.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { FileSpreadsheet, XCircle } from "lucide-react";
 import {

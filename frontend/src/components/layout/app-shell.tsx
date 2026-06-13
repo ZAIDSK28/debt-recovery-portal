@@ -1,22 +1,17 @@
+// src/components/layout/app-shell.tsx
 import { useState, type ReactNode } from "react";
 import { AppHeader } from "@/components/layout/app-header";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { cn } from "@/lib/utils";
 
-export function AppShell({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
+export function AppShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
   const closeMobileSidebar = () => setMobileOpen(false);
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-[#EAEBF8]">
       <div className="flex min-h-screen">
         {/* Desktop sidebar – hidden on mobile */}
         <div className="hidden md:block">
@@ -59,7 +54,6 @@ export function AppShell({
         {/* Main content area */}
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
           <AppHeader
-            title={title}
             onMenuClick={() => setMobileOpen(true)}
             onSidebarToggle={() => setCollapsed((prev) => !prev)}
             isSidebarCollapsed={collapsed}
