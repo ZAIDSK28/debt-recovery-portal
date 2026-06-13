@@ -1,57 +1,35 @@
 /* src/index.css */
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 :root {
-  --font-body: "Plus Jakarta Sans", sans-serif;
-  --font-heading: "Manrope", sans-serif;
+  --font-body: "Inter", sans-serif;
 
-  --sky-50: #f0f9ff;
-  --sky-100: #e0f2fe;
-  --sky-200: #bae6fd;
-  --sky-300: #7dd3fc;
-  --sky-400: #38bdf8;
-  --sky-500: #0ea5e9;
-  --sky-600: #0284c7;
-  --sky-700: #0369a1;
-  --sky-800: #075985;
-  --sky-900: #0c4a6e;
-  --sky-950: #082f49;
+  /* ── Periwinkle palette ── */
+  --color-bg:           #ECEEF8;
+  --color-surface:      #FFFFFF;
+  --color-border:       #DFE1F0;
+  --color-accent:       #6F72BE;
+  --color-accent-light: #EAEBF8;
+  --color-surface-sub:  #F6F7FC;
 
-  --gray-50: #f8fafc;
-  --gray-100: #f1f5f9;
-  --gray-150: #ebf2f7;
-  --gray-200: #e2e8f0;
-  --gray-300: #cbd5e1;
-  --gray-400: #94a3b8;
-  --gray-500: #64748b;
-  --gray-600: #475569;
-  --gray-700: #334155;
-  --gray-800: #1e293b;
-  --gray-900: #0f172a;
+  --color-text-primary:   #1E1E30;
+  --color-text-secondary: #6B6B8A;
+  --color-text-tertiary:  #9898B4;
 
-  --green-100: #dcfce7;
-  --green-600: #16a34a;
-  --amber-100: #fef3c7;
-  --amber-600: #d97706;
-  --red-100: #fee2e2;
-  --red-500: #ef4444;
-  --purple-100: #ede9fe;
-  --purple-600: #7c3aed;
+  --color-success-bg:  #E3F7EC;
+  --color-success-fg:  #22A55A;
+  --color-warning-bg:  #FFF0DC;
+  --color-warning-fg:  #D97B0A;
+  --color-danger-bg:   #FDEEF1;
+  --color-danger-fg:   #E04E6A;
 
-  --gradient-sky: linear-gradient(135deg, #bae6fd, #7dd3fc, #38bdf8);
-  --gradient-sky-strong: linear-gradient(135deg, #7dd3fc, #38bdf8, #0ea5e9);
-  --gradient-app: radial-gradient(circle at top, rgba(186, 230, 253, 0.9), transparent 28%),
-    linear-gradient(180deg, #f8fafc 0%, #f0f9ff 45%, #eef8ff 100%);
-  --gradient-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.98));
-
-  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08), 0 2px 10px rgba(15, 23, 42, 0.04);
-  --shadow-lg: 0 16px 40px rgba(14, 165, 233, 0.12), 0 8px 20px rgba(15, 23, 42, 0.06);
-  --shadow-sky: 0 10px 30px rgba(56, 189, 248, 0.22);
-  --radius: 12px;
-  --radius-lg: 16px;
+  --shadow-card: 0 2px 8px rgba(30, 30, 48, 0.06);
+  --shadow-card-hover: 0 4px 12px rgba(30, 30, 48, 0.08);
+  --radius-card:  18px;
+  --radius-input: 8px;
+  --radius-btn:   10px;
+  --radius-badge: 20px;
 }
 
 *,
@@ -64,119 +42,62 @@ html {
   font-family: var(--font-body);
   -webkit-text-size-adjust: 100%;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--gradient-app);
-  color: var(--gray-900);
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
   font-family: var(--font-body);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-[role="heading"] {
-  font-family: var(--font-heading);
-}
-
-button,
-input,
-textarea,
-select {
-  font: inherit;
 }
 
 #root {
   min-height: 100vh;
 }
 
-::selection {
-  background: rgba(56, 189, 248, 0.2);
-  color: var(--gray-900);
-}
-
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--gray-300) transparent;
-}
-
-*::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-*::-webkit-scrollbar-thumb {
-  background: var(--gray-300);
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: content-box;
-}
-
-*::-webkit-scrollbar-thumb:hover {
-  background: var(--gray-400);
-  border: 2px solid transparent;
-  background-clip: content-box;
-}
-
-/* Ensure all form elements use the body font and proper size */
-input,
-textarea,
-select,
-button,
-.input-like {
+h1, h2, h3, h4, h5, h6, [role="heading"] {
   font-family: var(--font-body);
 }
 
-input,
-textarea,
-select {
-  font-size: 0.875rem; /* 14px */
-  line-height: 1.25rem;
+/* ── Form element reset ──────────────────────────────────────────────────────
+   Do NOT set a global font-size here — each component sets its own size.
+   Setting font-size: 0.875rem on input/select/button would fight 12px components.
+*/
+button, input, textarea, select {
+  font-family: var(--font-body);
+  font: inherit;
 }
 
-/* Optional: improve date input appearance */
-input[type="date"] {
-  position: relative;
-}
+/* ── Date input calendar icon ───────────────────────────────────────────────── */
+input[type="date"] { position: relative; }
 input[type="date"]::-webkit-calendar-picker-indicator {
   background: transparent;
-  bottom: 0;
+  inset: 0;
+  position: absolute;
   color: transparent;
   cursor: pointer;
-  height: auto;
-  left: 0;
-  position: absolute;
-  right: 0;
-  top: 0;
   width: auto;
+  height: auto;
 }
 
-@keyframes heartbeat {
-  0%, 100% {
-    transform: scale(1);
-  }
-  25% {
-    transform: scale(1.1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  75% {
-    transform: scale(1.15);
-  }
+/* ── Selection ──────────────────────────────────────────────────────────────── */
+::selection {
+  background: rgba(111, 114, 190, 0.15);
+  color: var(--color-text-primary);
 }
 
-.animate-heartbeat {
-  animation: heartbeat 1.2s ease-in-out infinite;
+/* ── Scrollbar ──────────────────────────────────────────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
 }
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--color-text-tertiary); }
