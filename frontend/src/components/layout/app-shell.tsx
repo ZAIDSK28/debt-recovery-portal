@@ -16,24 +16,32 @@ export function AppShell({
   const closeMobileSidebar = () => setMobileOpen(false);
 
   return (
-    <div className="min-h-screen bg-[#ECEEF8] text-[#1E1E30]">
+    <div className="min-h-screen bg-gray-100">
       <div className="flex min-h-screen">
-        <AppSidebar collapsed={collapsed} />
+        {/* Desktop sidebar – hidden on mobile */}
+        <div className="hidden md:block">
+          <AppSidebar
+            collapsed={collapsed}
+            onSidebarToggle={() => setCollapsed((prev) => !prev)}
+          />
+        </div>
 
+        {/* Mobile overlay sidebar */}
         <div
           className={cn(
             "fixed inset-0 z-40 md:hidden",
             mobileOpen ? "pointer-events-auto" : "pointer-events-none"
           )}
         >
+          {/* Backdrop */}
           <div
             className={cn(
-              "absolute inset-0 bg-[rgba(30,30,48,0.2)] transition-opacity duration-300",
+              "absolute inset-0 bg-gray-900/20 transition-opacity duration-300",
               mobileOpen ? "opacity-100" : "opacity-0"
             )}
             onClick={closeMobileSidebar}
           />
-
+          {/* Sidebar panel */}
           <div
             className={cn(
               "absolute left-0 top-0 h-full w-[84vw] max-w-72 transform transition-transform duration-300 ease-out",
@@ -42,13 +50,13 @@ export function AppShell({
           >
             <AppSidebar
               mobile
-              collapsed={false}
               onNavigate={closeMobileSidebar}
               onClose={closeMobileSidebar}
             />
           </div>
         </div>
 
+        {/* Main content area */}
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
           <AppHeader
             title={title}
@@ -56,25 +64,8 @@ export function AppShell({
             onSidebarToggle={() => setCollapsed((prev) => !prev)}
             isSidebarCollapsed={collapsed}
           />
-
-          <main
-            className={cn(
-              "flex-1 px-3 py-3.5 sm:px-4 sm:py-5 md:px-6 md:py-6"
-            )}
-          >
-            <div
-              className="
-                min-h-full
-                rounded-[18px]
-                border
-                border-[#DFE1F0]
-                bg-white
-                shadow-[0_2px_8px_rgba(30,30,48,0.06)]
-                p-3
-                sm:p-4
-                md:p-5
-              "
-            >
+          <main className="flex-1 p-4 md:p-6">
+            <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 md:p-5">
               {children}
             </div>
           </main>

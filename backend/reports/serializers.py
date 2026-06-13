@@ -24,20 +24,61 @@ def q(value: Decimal) -> Decimal:
 
 # ─── Stock helpers ────────────────────────────────────────────────────────────
 
+def _validate_stock_for_items(computed_items: list[dict]) -> None:
+    """
+    Pre-save stock gate — called from validate() before anything is written.
+    Raises ValidationError listing every line item that cannot be fulfilled
+    so the user gets all errors at once, not one at a time.
+
+    A product with no StockItem record at all is treated as zero stock.
+    Partial fulfilment is not allowed: the full invoiced quantity must be
+    available in a single warehouse.
+    """
+    errors: list[str] = []
+
+    for item in computed_items:
+        product: Product | None = item.get("product")
+        quantity: Decimal = item.get("quantity", Decimal("0.00"))
+
+        if product is None or quantity <= Decimal("0.00"):
+            continue
+
+        # Best available stock row for this product (highest quantity)
+        stock_item: StockItem | None = (
+            StockItem.objects.filter(
+                product=product,
+                warehouse__is_active=True,
+            )
+            .order_by("-quantity")
+            .first()
+        )
+
+        if stock_item is None:
+            errors.append(
+                f"'{product.name}' ({product.product_code}) has no stock record. "
+                "Record an IN movement before invoicing this product."
+            )
+        elif stock_item.quantity <= Decimal("0.00"):
+            errors.append(
+                f"'{product.name}' ({product.product_code}) is out of stock "
+                f"(warehouse: {stock_item.warehouse.name})."
+            )
+        elif quantity > stock_item.quantity:
+            errors.append(
+                f"'{product.name}' ({product.product_code}): requested {quantity}, "
+                f"only {stock_item.quantity} available in '{stock_item.warehouse.name}'."
+            )
+
+    if errors:
+        raise serializers.ValidationError({"items": errors})
+
+
 def _deduct_stock_for_items(computed_items: list[dict], invoice_number: str) -> None:
     """
-    For each computed invoice item that has a linked Product, deduct the
-    invoiced quantity from the warehouse that currently holds the most stock
-    of that product.
-
-    Rules:
-    - If a StockItem record exists for this product (any active warehouse),
-      deduct from the one with the highest on-hand quantity.
-    - Stock is allowed to go to 0 but not below; if requested qty > on-hand,
-      deduct only what is available and record the actual deducted amount.
-    - If no StockItem exists for this product, skip silently — stock tracking
-      may not yet be configured for every product.
-    - All operations run inside the caller's transaction.atomic() block.
+    Deducts stock inside a transaction.atomic() block (called from create/update).
+    Validation has already passed, but we use select_for_update() to guard
+    against concurrent requests that pass validation simultaneously.
+    Raises ValidationError on race condition so the transaction is rolled back.
     """
     note = f"Invoice {invoice_number}"
 
@@ -48,7 +89,6 @@ def _deduct_stock_for_items(computed_items: list[dict], invoice_number: str) -> 
         if product is None or quantity <= Decimal("0.00"):
             continue
 
-        # Lock and fetch the best stock item (highest quantity) for this product
         stock_item: StockItem | None = (
             StockItem.objects.select_for_update()
             .filter(product=product, warehouse__is_active=True)
@@ -56,23 +96,24 @@ def _deduct_stock_for_items(computed_items: list[dict], invoice_number: str) -> 
             .first()
         )
 
-        if stock_item is None:
-            # No stock record exists — skip without error
-            continue
+        if stock_item is None or stock_item.quantity < quantity:
+            raise serializers.ValidationError(
+                {
+                    "items": (
+                        f"Stock for '{product.name}' changed between validation and save "
+                        "(concurrent request). Please retry."
+                    )
+                }
+            )
 
-        deducted = min(quantity, stock_item.quantity)
-        if deducted <= Decimal("0.00"):
-            # Nothing to deduct (stock already at zero)
-            continue
-
-        stock_item.quantity -= deducted
+        stock_item.quantity -= quantity
         stock_item.save(update_fields=["quantity", "updated_at"])
 
         StockMovement.objects.create(
             product=product,
             warehouse=stock_item.warehouse,
             movement_type=StockMovement.MovementType.OUT,
-            quantity=deducted,
+            quantity=quantity,
             note=note,
         )
 
@@ -429,7 +470,13 @@ class PrintableInvoiceCreateSerializer(_InvoiceComputationMixin, serializers.Ser
                     {"invoice_number": "Invoice number already exists."}
                 )
 
-        return self._compute(attrs)
+        attrs = self._compute(attrs)
+
+        # Validate stock availability for every line item BEFORE saving anything.
+        # _compute() populates _computed_items with resolved Product instances.
+        _validate_stock_for_items(attrs["_computed_items"])
+
+        return attrs
 
     def create(self, validated_data):
         request = self.context["request"]
@@ -552,7 +599,12 @@ class PrintableInvoiceUpdateSerializer(_InvoiceComputationMixin, serializers.Ser
 
         if "items" in attrs:
             merged["items"] = attrs["items"]
-            return self._compute(merged)
+            computed = self._compute(merged)
+            # Validate stock for the new item set before allowing the update.
+            # We restore old stock first (inside the transaction), so here we
+            # check against current on-hand levels as a pre-flight guard.
+            _validate_stock_for_items(computed["_computed_items"])
+            return computed
 
         if "discount_amount" in attrs:
             computed = self._compute_from_existing_items(invoice, attrs)

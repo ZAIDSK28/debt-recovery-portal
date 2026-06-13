@@ -1,8 +1,8 @@
 // src/components/bills/import-bills-dialog.tsx
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { FileSpreadsheet, XCircle } from "lucide-react";
 import {
   Dialog,
   DialogBody,
@@ -166,16 +166,6 @@ export function ImportBillsDialog({
     [importState]
   );
 
-  const summary = importStatus
-    ? {
-        imported: importStatus.imported,
-        errorCount: importStatus.error_count,
-        errors: importStatus.errors,
-        processedRows: importStatus.processed_rows,
-        totalRows: importStatus.total_rows,
-      }
-    : null;
-
   return (
     <Dialog
       open={open}
@@ -190,104 +180,123 @@ export function ImportBillsDialog({
         </DialogHeader>
         <DialogBody>
           <div className="space-y-4">
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-gray-600">
               Upload an XLSX file containing invoice_number, invoice_date, route_name, outlet_name, brand, and actual_amount.
             </p>
 
-            <Input
-              type="file"
-              accept=".xlsx,.xls"
-              disabled={importState === "uploading" || importState === "processing"}
-              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-            />
+            <div className="flex items-center gap-3">
+              <Input
+                type="file"
+                accept=".xlsx,.xls"
+                disabled={importState === "uploading" || importState === "processing"}
+                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                className="flex-1"
+              />
+              {file && importState === "idle" && (
+                <div className="flex items-center gap-1 text-sm text-gray-500">
+                  <FileSpreadsheet className="h-4 w-4" />
+                  <span>{file.name}</span>
+                </div>
+              )}
+            </div>
 
-            {(importState === "processing" || importState === "completed" || importState === "failed") ? (
-              <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+            {(importState === "processing" || importState === "completed" || importState === "failed") && (
+              <div className="space-y-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                {/* Progress bar */}
+                <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
                   <div
                     className={`h-full rounded-full transition-all duration-300 ${
-                      importState === "failed" ? "bg-red-500" : "bg-emerald-500"
+                      importState === "failed" ? "bg-red-500" : "bg-[#6F72BE]"
                     }`}
                     style={{ width: `${Math.max(0, Math.min(progress, 100))}%` }}
                   />
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-600">
+                  <span className="text-gray-600">
                     {importState === "processing"
                       ? "Import in progress"
                       : importState === "completed"
                         ? "Import completed"
                         : "Import failed"}
                   </span>
-                  <span className="font-medium text-slate-900">{progress}%</span>
+                  <span className="font-medium text-gray-900">{progress}%</span>
                 </div>
 
-                {importState === "completed" ? (
-                  <p className="text-xs text-slate-500">
-                    Closing automatically...
-                  </p>
-                ) : null}
+                {importState === "completed" && (
+                  <p className="text-xs text-gray-500">Closing automatically in a few seconds...</p>
+                )}
 
-                {importStatus ? (
+                {importStatus && (
                   <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
-                    <div className="rounded-lg bg-white p-3">
-                      <p className="text-slate-500">Status</p>
-                      <p className="font-semibold capitalize text-slate-900">{importStatus.status}</p>
+                    <div className="rounded-lg border border-gray-200 bg-white p-3">
+                      <p className="text-gray-500">Status</p>
+                      <p className="font-semibold capitalize text-gray-900">{importStatus.status}</p>
                     </div>
-                    <div className="rounded-lg bg-white p-3">
-                      <p className="text-slate-500">Processed</p>
-                      <p className="font-semibold text-slate-900">
+                    <div className="rounded-lg border border-gray-200 bg-white p-3">
+                      <p className="text-gray-500">Processed</p>
+                      <p className="font-semibold text-gray-900">
                         {importStatus.processed_rows}/{importStatus.total_rows}
                       </p>
                     </div>
-                    <div className="rounded-lg bg-white p-3">
-                      <p className="text-slate-500">Imported</p>
-                      <p className="font-semibold text-slate-900">{importStatus.imported}</p>
+                    <div className="rounded-lg border border-gray-200 bg-white p-3">
+                      <p className="text-gray-500">Imported</p>
+                      <p className="font-semibold text-gray-900">{importStatus.imported}</p>
                     </div>
-                    <div className="rounded-lg bg-white p-3">
-                      <p className="text-slate-500">Errors</p>
-                      <p className="font-semibold text-slate-900">{importStatus.error_count}</p>
-                    </div>
-                  </div>
-                ) : null}
-
-                {summary && summary.errors.length > 0 ? (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-slate-700">Import errors</p>
-                    <div className="max-h-48 space-y-2 overflow-auto rounded-lg border border-slate-200 bg-white p-3">
-                      {summary.errors.map((error, index) => (
-                        <div key={`${error.row ?? "unknown"}-${index}`} className="text-sm">
-                          <span className="font-medium text-slate-900">
-                            Row {error.row ?? "—"}:
-                          </span>{" "}
-                          <span className="text-slate-600">{error.message}</span>
-                        </div>
-                      ))}
+                    <div className="rounded-lg border border-gray-200 bg-white p-3">
+                      <p className="text-gray-500">Errors</p>
+                      <p className="font-semibold text-red-600">{importStatus.error_count}</p>
                     </div>
                   </div>
-                ) : null}
+                )}
 
-                {importState === "failed" && !importStatus ? (
-                  <p className="text-sm text-red-600">
+                {/* Error list without download button */}
+                {importStatus && importStatus.errors.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-gray-700">Error details</p>
+                    <div className="max-h-48 overflow-auto rounded-lg border border-gray-200 bg-white">
+                      <table className="min-w-full text-sm">
+                        <thead className="sticky top-0 bg-gray-50">
+                          <tr className="border-b border-gray-200">
+                            <th className="px-3 py-2 text-left font-medium text-gray-600">Row</th>
+                            <th className="px-3 py-2 text-left font-medium text-gray-600">Error Message</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {importStatus.errors.map((error, idx) => (
+                            <tr key={idx} className="border-t border-gray-100">
+                              <td className="px-3 py-2 text-gray-700">{error.row ?? "—"}</td>
+                              <td className="px-3 py-2 text-red-600">{error.message}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {importState === "failed" && !importStatus && (
+                  <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                    <XCircle className="h-4 w-4" />
                     The import could not be completed. Please try again.
-                  </p>
-                ) : null}
+                  </div>
+                )}
               </div>
-            ) : null}
+            )}
           </div>
         </DialogBody>
         <DialogFooter>
           {importState === "completed" || importState === "failed" ? (
-            <Button onClick={() => onOpenChange(false)}>Close</Button>
+            <Button onClick={() => onOpenChange(false)} className="h-9 text-sm">Close</Button>
           ) : (
             <>
-              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={!canClose}>
+              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={!canClose} className="h-9 text-sm">
                 Cancel
               </Button>
               <Button
                 onClick={handleImport}
                 disabled={!file || importMutation.isPending || importState === "processing"}
+                className="h-9 text-sm"
               >
                 {importState === "uploading"
                   ? "Uploading..."

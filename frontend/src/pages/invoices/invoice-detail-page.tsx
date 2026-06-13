@@ -84,36 +84,36 @@ export default function InvoiceDetailPage() {
 
   return (
     <AppShell title="Invoice Detail">
-      <div className="space-y-4 sm:space-y-5">
+      <div className="space-y-5">
         <PageHeader
           title={invoice ? `Invoice ${invoice.invoice_number}` : "Invoice Detail"}
           description="View printable invoice details and linked bill information."
           actions={
-            <div className="hidden sm:flex sm:w-auto sm:flex-row sm:flex-wrap sm:gap-2">
-              <Button className="w-full sm:w-auto" variant="outline" onClick={handleBack}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to List
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={handleBack} className="h-9 gap-1.5 text-sm">
+                <ArrowLeft className="h-4 w-4" />
+                Back
               </Button>
-              {invoice ? (
+              {invoice && (
                 <>
-                  <Button className="w-full sm:w-auto" variant="outline" onClick={() => handleEdit(invoice.id)}>
-                    <Pencil className="mr-2 h-4 w-4" />
+                  <Button variant="outline" onClick={() => handleEdit(invoice.id)} className="h-9 gap-1.5 text-sm">
+                    <Pencil className="h-4 w-4" />
                     Edit
                   </Button>
-                  <Button className="w-full sm:w-auto" onClick={() => void handlePrint()}>
-                    <Printer className="mr-2 h-4 w-4" />
+                  <Button onClick={() => void handlePrint()} className="h-9 gap-1.5 text-sm">
+                    <Printer className="h-4 w-4" />
                     Print
                   </Button>
-                  <Button className="w-full sm:w-auto" variant="outline" onClick={() => void handleDownloadPdf()}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download PDF
+                  <Button variant="outline" onClick={() => void handleDownloadPdf()} className="h-9 gap-1.5 text-sm">
+                    <Download className="h-4 w-4" />
+                    PDF
                   </Button>
-                  <Button className="w-full sm:w-auto" variant="outline" onClick={() => setDeleteDialogOpen(true)}>
-                    <Trash2 className="mr-2 h-4 w-4 text-red-500" />
+                  <Button variant="outline" onClick={() => setDeleteDialogOpen(true)} className="h-9 gap-1.5 text-sm text-red-600 hover:bg-red-50 hover:text-red-700">
+                    <Trash2 className="h-4 w-4" />
                     Delete
                   </Button>
                 </>
-              ) : null}
+              )}
             </div>
           }
         />
@@ -124,92 +124,142 @@ export default function InvoiceDetailPage() {
           <EmptyState title="Invoice not found" description="The requested invoice could not be loaded." />
         ) : (
           <>
-            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-              <Card>
+            {/* Info grid */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <Card className="border-gray-200 shadow-sm">
                 <CardHeader>
-                  <CardTitle>Invoice Header</CardTitle>
+                  <CardTitle className="text-base font-semibold">Invoice Header</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2.5 text-sm">
-                  <p>
-                    <span className="font-medium text-slate-900">Status:</span>{" "}
+                <CardContent className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Status:</span>
                     <InvoiceStatusBadge status={invoice.status} />
-                  </p>
-                  <p className="break-words"><span className="font-medium text-slate-900">Invoice Number:</span> {invoice.invoice_number}</p>
-                  <p><span className="font-medium text-slate-900">Invoice Date:</span> {formatDate(invoice.invoice_date)}</p>
-                  <p><span className="font-medium text-slate-900">Creation Mode:</span> {invoice.creation_mode.replaceAll("_", " ")}</p>
-                  <p><span className="font-medium text-slate-900">Created At:</span> {formatDate(invoice.created_at)}</p>
-                  <p><span className="font-medium text-slate-900">Updated At:</span> {formatDate(invoice.updated_at)}</p>
-                  <p>
-                    <span className="font-medium text-slate-900">Linked Bill ID:</span>{" "}
-                    {invoice.linked_bill_id ?? "—"}
-                  </p>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Invoice Number:</span>
+                    <span className="font-mono font-medium">{invoice.invoice_number}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Invoice Date:</span>
+                    <span>{formatDate(invoice.invoice_date)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Creation Mode:</span>
+                    <span className="capitalize">{invoice.creation_mode.replaceAll("_", " ")}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Created At:</span>
+                    <span>{formatDate(invoice.created_at)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Updated At:</span>
+                    <span>{formatDate(invoice.updated_at)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Linked Bill ID:</span>
+                    <span>{invoice.linked_bill_id ?? "—"}</span>
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-gray-200 shadow-sm">
                 <CardHeader>
-                  <CardTitle>Customer Details</CardTitle>
+                  <CardTitle className="text-base font-semibold">Customer Details</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2.5 text-sm">
-                  <p className="break-words"><span className="font-medium text-slate-900">Customer Name:</span> {invoice.customer_name}</p>
-                  <p><span className="font-medium text-slate-900">Phone:</span> {invoice.customer_phone || "—"}</p>
-                  <p className="break-words"><span className="font-medium text-slate-900">GST Number:</span> {invoice.gst_number || "—"}</p>
-                  <p className="break-words"><span className="font-medium text-slate-900">Address:</span> {invoice.customer_address || "—"}</p>
+                <CardContent className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Customer Name:</span>
+                    <span className="font-medium">{invoice.customer_name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Phone:</span>
+                    <span>{invoice.customer_phone || "—"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">GST Number:</span>
+                    <span>{invoice.gst_number || "—"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Address:</span>
+                    <span className="text-right">{invoice.customer_address || "—"}</span>
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-gray-200 shadow-sm">
                 <CardHeader>
-                  <CardTitle>Bill Mapping</CardTitle>
+                  <CardTitle className="text-base font-semibold">Bill Mapping</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2.5 text-sm">
-                  <p className="break-words"><span className="font-medium text-slate-900">Route Name:</span> {invoice.route_name || "—"}</p>
-                  <p className="break-words"><span className="font-medium text-slate-900">Outlet Name:</span> {invoice.outlet_name || "—"}</p>
-                  <p className="break-words"><span className="font-medium text-slate-900">Brand:</span> {invoice.brand || "—"}</p>
-                  <p className="break-words">
-                    <span className="font-medium text-slate-900">Linked Bill:</span>{" "}
-                    {invoice.linked_bill_id ? `#${invoice.linked_bill_id}` : "Deleted / unavailable"}
-                  </p>
+                <CardContent className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Route Name:</span>
+                    <span>{invoice.route_name || "—"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Outlet Name:</span>
+                    <span>{invoice.outlet_name || "—"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Brand:</span>
+                    <span>{invoice.brand || "—"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Linked Bill:</span>
+                    <span>{invoice.linked_bill_id ? `#${invoice.linked_bill_id}` : "Deleted / unavailable"}</span>
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-gray-200 shadow-sm">
                 <CardHeader>
-                  <CardTitle>Totals</CardTitle>
+                  <CardTitle className="text-base font-semibold">Totals</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2.5 text-sm">
-                  <p><span className="font-medium text-slate-900">Subtotal:</span> {formatCurrency(invoice.subtotal)}</p>
-                  <p><span className="font-medium text-slate-900">Tax Amount:</span> {formatCurrency(invoice.tax_amount)}</p>
-                  <p><span className="font-medium text-slate-900">Discount Amount:</span> {formatCurrency(invoice.discount_amount)}</p>
-                  <p><span className="font-medium text-slate-900">Grand Total:</span> {formatCurrency(invoice.total_amount)}</p>
+                <CardContent className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Subtotal:</span>
+                    <span>{formatCurrency(invoice.subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Tax Amount:</span>
+                    <span>{formatCurrency(invoice.tax_amount)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Discount Amount:</span>
+                    <span>{formatCurrency(invoice.discount_amount)}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-gray-100 pt-2 font-semibold">
+                    <span>Grand Total:</span>
+                    <span className="text-[#6F72BE]">{formatCurrency(invoice.total_amount)}</span>
+                  </div>
                 </CardContent>
               </Card>
             </div>
 
-            <Card>
+            {/* Items table */}
+            <Card className="border-gray-200 shadow-sm">
               <CardHeader>
-                <CardTitle>Items</CardTitle>
+                <CardTitle className="text-base font-semibold">Items</CardTitle>
               </CardHeader>
-              <CardContent className="px-0 pb-5 pt-0">
-                <TableWrapper className="w-full rounded-none border-0 shadow-none">
-                  <Table className="min-w-full table-auto">
+              <CardContent className="p-0">
+                <TableWrapper className="rounded-t-none border-0">
+                  <Table>
                     <THead>
                       <tr>
                         <TH>Product Code</TH>
                         <TH>Product Name</TH>
                         <TH>Category</TH>
                         <TH>Description</TH>
-                        <TH>Quantity</TH>
+                        <TH>Qty</TH>
                         <TH>Rate</TH>
-                        <TH>Tax Rate</TH>
-                        <TH>Tax Amount</TH>
+                        <TH>Tax %</TH>
+                        <TH>Tax Amt</TH>
                         <TH>Amount</TH>
                         <TH>Line Total</TH>
                       </tr>
                     </THead>
                     <TBody>
                       {invoice.items.map((item) => (
-                        <tr key={item.id} className="border-t border-slate-100 align-top">
+                        <tr key={item.id} className="border-t border-gray-100">
                           <TD>{item.product_code || "—"}</TD>
                           <TD>{item.product_name || "—"}</TD>
                           <TD>{item.category || "—"}</TD>
@@ -228,51 +278,36 @@ export default function InvoiceDetailPage() {
               </CardContent>
             </Card>
 
-            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-              <Card>
+            {/* Notes & Terms */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <Card className="border-gray-200 shadow-sm">
                 <CardHeader>
-                  <CardTitle>Notes</CardTitle>
+                  <CardTitle className="text-base font-semibold">Notes</CardTitle>
                 </CardHeader>
-                <CardContent className="text-sm text-slate-700">
+                <CardContent className="text-sm text-gray-700">
                   {invoice.notes || "—"}
                 </CardContent>
               </Card>
-
-              <Card>
+              <Card className="border-gray-200 shadow-sm">
                 <CardHeader>
-                  <CardTitle>Terms</CardTitle>
+                  <CardTitle className="text-base font-semibold">Terms</CardTitle>
                 </CardHeader>
-                <CardContent className="text-sm text-slate-700">
+                <CardContent className="text-sm text-gray-700">
                   {invoice.terms || "—"}
                 </CardContent>
               </Card>
             </div>
 
-            <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 p-2.5 backdrop-blur sm:hidden">
-              <div className="mx-auto flex max-w-3xl gap-2">
-                <Button className="flex-1" variant="outline" onClick={handleBack}>
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
-                </Button>
-                <Button className="flex-1" variant="outline" onClick={() => handleEdit(invoice.id)}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </Button>
-                <Button className="flex-1" onClick={() => void handlePrint()}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print
-                </Button>
-                <Button className="flex-1" variant="outline" onClick={() => void handleDownloadPdf()}>
-                  <Download className="mr-2 h-4 w-4" />
-                  PDF
-                </Button>
-                <Button className="flex-1" variant="outline" onClick={() => setDeleteDialogOpen(true)}>
-                  <Trash2 className="mr-2 h-4 w-4 text-red-500" />
-                  Delete
-                </Button>
+            {/* Mobile bottom bar */}
+            <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white/95 p-3 backdrop-blur sm:hidden">
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleBack} className="flex-1 h-9 text-sm">Back</Button>
+                <Button variant="outline" onClick={() => handleEdit(invoice.id)} className="flex-1 h-9 text-sm">Edit</Button>
+                <Button onClick={() => void handlePrint()} className="flex-1 h-9 text-sm">Print</Button>
+                <Button variant="outline" onClick={() => void handleDownloadPdf()} className="flex-1 h-9 text-sm">PDF</Button>
+                <Button variant="outline" onClick={() => setDeleteDialogOpen(true)} className="flex-1 h-9 text-sm text-red-600">Delete</Button>
               </div>
             </div>
-
             <div className="h-16 sm:hidden" />
           </>
         )}

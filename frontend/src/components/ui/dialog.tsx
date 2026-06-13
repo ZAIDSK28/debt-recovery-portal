@@ -15,14 +15,14 @@ export function DialogContent({
 }) {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[#1E1E30]/25 backdrop-blur-[3px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0" />
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-gray-900/20 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0" />
       <DialogPrimitive.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[20px] border border-[#DFE1F0] bg-white shadow-[0_16px_48px_rgba(30,30,48,0.16)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95 data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 sm:w-[95vw]",
+          "fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95 data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 sm:w-[95vw]",
           className
         )}
       >
-        <div className="h-[3px] w-full rounded-t-[20px] bg-[#6F72BE]" />
+        <div className="h-1 w-full rounded-t-xl bg-[#6F72BE]" />
         {children}
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>
@@ -30,12 +30,12 @@ export function DialogContent({
 }
 
 export function DialogHeader({ children }: { children: ReactNode }) {
-  return <div className="border-b border-[#ECEEF8] px-5 py-4">{children}</div>;
+  return <div className="border-b border-gray-100 px-5 py-4">{children}</div>;
 }
 
 export function DialogTitle({ children }: { children: ReactNode }) {
   return (
-    <DialogPrimitive.Title className="text-[15px] font-semibold text-[#1E1E30]">
+    <DialogPrimitive.Title className="text-base font-semibold text-gray-900">
       {children}
     </DialogPrimitive.Title>
   );
@@ -47,7 +47,7 @@ export function DialogBody({ children }: { children: ReactNode }) {
 
 export function DialogFooter({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-col-reverse gap-2.5 border-t border-[#ECEEF8] px-5 py-4 sm:flex-row sm:items-center sm:justify-end">
+    <div className="flex flex-col-reverse gap-2.5 border-t border-gray-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-end">
       {children}
     </div>
   );

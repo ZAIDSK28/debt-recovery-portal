@@ -128,3 +128,55 @@ select {
   border: 2px solid transparent;
   background-clip: content-box;
 }
+
+/* Ensure all form elements use the body font and proper size */
+input,
+textarea,
+select,
+button,
+.input-like {
+  font-family: var(--font-body);
+}
+
+input,
+textarea,
+select {
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.25rem;
+}
+
+/* Optional: improve date input appearance */
+input[type="date"] {
+  position: relative;
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  background: transparent;
+  bottom: 0;
+  color: transparent;
+  cursor: pointer;
+  height: auto;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: auto;
+}
+
+@keyframes heartbeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  75% {
+    transform: scale(1.15);
+  }
+}
+
+.animate-heartbeat {
+  animation: heartbeat 1.2s ease-in-out infinite;
+}

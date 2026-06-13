@@ -49,50 +49,67 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,rgba(186,230,253,0.95),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#f0f9ff_100%)] px-4 py-10">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(125,211,252,0.2),transparent_20%),radial-gradient(circle_at_80%_10%,rgba(56,189,248,0.12),transparent_24%)]" />
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
+      {/* Subtle radial gradient background - neutral with purple undertone */}
+      <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-white to-gray-100/50" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(111,114,190,0.08),transparent_40%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_70%,rgba(111,114,190,0.05),transparent_50%)]" />
 
-      <Card className="relative w-full max-w-md border-white/70 shadow-[0_20px_50px_rgba(14,165,233,0.14)]">
+      <Card className="relative w-full max-w-md border border-gray-200/80 bg-white/90 shadow-xl shadow-gray-200/30 backdrop-blur-sm">
         <CardHeader className="items-center text-center">
-          <div className="mb-4 rounded-2xl bg-[linear-gradient(135deg,#7dd3fc,#38bdf8,#0ea5e9)] p-3 text-white shadow-[0_10px_30px_rgba(56,189,248,0.22)]">
+          <div className="mb-5 rounded-2xl bg-[#6F72BE] p-3.5 text-white shadow-md shadow-[#6F72BE]/20">
             <ShieldCheck className="h-7 w-7" />
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">Debt Recovery Portal</CardTitle>
-          <p className="text-sm text-slate-500">Sign in to access your operations workspace</p>
+          <CardTitle className="font-heading text-2xl font-extrabold tracking-tight text-gray-900">
+            Debt Recovery Portal
+          </CardTitle>
+          <p className="text-sm font-medium text-gray-500">
+            Sign in to access your operations workspace
+          </p>
         </CardHeader>
 
         <CardContent>
           <form className="space-y-5" onSubmit={form.handleSubmit(onSubmit)}>
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input id="username" autoComplete="username" {...form.register("username")} />
-              {form.formState.errors.username ? (
+              <Label htmlFor="username" className="text-sm font-semibold text-gray-700">
+                Username
+              </Label>
+              <Input
+                id="username"
+                autoComplete="username"
+                placeholder="e.g., john.doe"
+                {...form.register("username")}
+              />
+              {form.formState.errors.username && (
                 <p className="text-sm text-red-500">{form.formState.errors.username.message}</p>
-              ) : null}
+              )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-sm font-semibold text-gray-700">
+                Password
+              </Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   className="pr-10"
+                  placeholder="••••••••"
                   {...form.register("password")}
                 />
                 <button
                   type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-600"
                   onClick={() => setShowPassword((prev) => !prev)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              {form.formState.errors.password ? (
+              {form.formState.errors.password && (
                 <p className="text-sm text-red-500">{form.formState.errors.password.message}</p>
-              ) : null}
+              )}
             </div>
 
             <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>

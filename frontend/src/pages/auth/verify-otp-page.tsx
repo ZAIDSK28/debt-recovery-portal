@@ -107,16 +107,23 @@ export default function VerifyOtpPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,rgba(186,230,253,0.95),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#f0f9ff_100%)] px-4 py-10">
-      <Card className={cn("w-full max-w-md shadow-[0_20px_50px_rgba(14,165,233,0.14)] transition", shake && "animate-pulse")}>
+      <Card
+        className={cn(
+          "w-full max-w-md border-white/70 shadow-[0_20px_50px_rgba(14,165,233,0.14)] transition-all",
+          shake && "animate-shake"
+        )}
+      >
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold tracking-tight">Verify OTP</CardTitle>
-          <p className="text-sm text-slate-500">
+          <CardTitle className="font-heading text-2xl font-extrabold tracking-tight text-gray-900">
+            Verify OTP
+          </CardTitle>
+          <p className="text-sm font-medium text-gray-500">
             Enter the six-digit code sent to your registered email.
           </p>
         </CardHeader>
 
         <CardContent className="space-y-6">
-          <div className="flex justify-center gap-2" onPaste={handlePaste}>
+          <div className="flex justify-center gap-3" onPaste={handlePaste}>
             {digits.map((digit, index) => (
               <input
                 key={index}
@@ -129,7 +136,7 @@ export default function VerifyOtpPage() {
                 inputMode="numeric"
                 autoComplete={index === 0 ? "one-time-code" : undefined}
                 maxLength={1}
-                className="h-14 w-12 rounded-xl border border-slate-200 bg-white text-center text-xl font-bold text-slate-900 outline-none ring-0 focus:border-sky-300 focus:ring-2 focus:ring-sky-200"
+                className="h-14 w-12 rounded-xl border border-gray-200 bg-white/90 text-center font-heading text-xl font-bold text-gray-800 shadow-sm outline-none transition-all duration-150 focus:border-sky-300 focus:ring-2 focus:ring-sky-200/60"
                 aria-label={`OTP digit ${index + 1}`}
               />
             ))}
@@ -139,14 +146,14 @@ export default function VerifyOtpPage() {
             {isSubmitting ? "Verifying..." : "Verify OTP"}
           </Button>
 
-          <div className="text-center text-sm text-slate-500">
+          <div className="text-center text-sm">
             {cooldown > 0 ? (
-              <span>Resend available in {cooldown}s</span>
+              <span className="text-gray-500">Resend available in {cooldown}s</span>
             ) : (
               <button
                 type="button"
                 onClick={handleResend}
-                className="font-semibold text-sky-700 transition hover:text-sky-800"
+                className="font-semibold text-sky-600 transition hover:text-sky-700"
               >
                 Resend OTP
               </button>
@@ -154,6 +161,18 @@ export default function VerifyOtpPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Add shake animation if not already present in globals */}
+      <style>{`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          75% { transform: translateX(5px); }
+        }
+        .animate-shake {
+          animation: shake 0.3s ease-in-out;
+        }
+      `}</style>
     </div>
   );
 }

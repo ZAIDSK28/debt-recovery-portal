@@ -1,3 +1,4 @@
+// src/components/ui/combobox.tsx
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -75,28 +76,29 @@ export const Combobox = memo(function Combobox({
         disabled={disabled}
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          "flex h-9 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800",
-          "focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-300 disabled:cursor-not-allowed disabled:bg-slate-50"
+          "flex h-9 w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800",
+          "focus:outline-none focus:ring-2 focus:ring-[#6F72BE]/30 focus:border-[#6F72BE] disabled:cursor-not-allowed disabled:bg-gray-50",
+          "hover:border-gray-300 transition-colors"
         )}
         aria-expanded={open}
         aria-haspopup="listbox"
       >
-        <span className={cn("truncate", selected ? "text-slate-800" : "text-slate-400")}>
+        <span className={cn("truncate", selected ? "text-gray-800" : "text-gray-400")}>
           {selected?.label ?? placeholder}
         </span>
-        <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
+        <ChevronDown className="h-4 w-4 shrink-0 text-gray-500" />
       </button>
 
-      {open ? (
-        <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_32px_rgba(15,23,42,0.12)]">
-          <div className="border-b border-slate-100 p-2">
+      {open && (
+        <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
+          <div className="border-b border-gray-100 p-2">
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={searchPlaceholder}
-                className="h-9 w-full rounded-xl border border-slate-200 pl-9 pr-3 text-sm outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-200"
+                className="h-9 w-full rounded-xl border border-gray-200 pl-9 pr-3 text-sm outline-none focus:border-[#6F72BE] focus:ring-2 focus:ring-[#6F72BE]/30"
               />
             </div>
           </div>
@@ -111,18 +113,18 @@ export const Combobox = memo(function Combobox({
                     setOpen(false);
                     setQuery("");
                   }}
-                  className="flex min-h-8 w-full items-center justify-between rounded-xl px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-sky-50"
+                  className="flex min-h-8 w-full items-center justify-between rounded-xl px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-[#EAEBF8]"
                 >
                   <span className="truncate">{option.label}</span>
-                  {option.value === value ? <Check className="h-4 w-4 shrink-0 text-sky-700" /> : null}
+                  {option.value === value && <Check className="h-4 w-4 shrink-0 text-[#6F72BE]" />}
                 </button>
               ))
             ) : (
-              <div className="px-3 py-3 text-sm text-slate-500">No results found.</div>
+              <div className="px-3 py-3 text-sm text-gray-500">No results found.</div>
             )}
           </div>
         </div>
-      ) : null}
+      )}
     </div>
   );
 });

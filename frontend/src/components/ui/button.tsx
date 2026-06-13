@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
   [
-    "inline-flex items-center justify-center font-semibold",
+    "inline-flex items-center justify-center font-semibold leading-none",
     "transition-all duration-150 disabled:pointer-events-none disabled:opacity-40",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6F72BE]/30",
     "active:scale-[0.97]",
@@ -23,12 +23,14 @@ const buttonVariants = cva(
           "rounded-[10px] bg-[#E04E6A] text-white shadow-[0_1px_4px_rgba(224,78,106,0.25)] hover:bg-[#C9405A]",
       },
       size: {
-        default: "h-8 px-3.5 text-[13px]",
-        sm:      "h-7 px-2.5 text-[12px]",
-        xs:      "h-6 px-2   text-[11px]",
-        lg:      "h-9 px-5   text-[14px]",
-        icon:    "h-7 w-7",
-        "icon-xs": "h-6 w-6",
+        // All text sizes locked to 12px to match table cell density.
+        // Height stays as-is so touch targets remain comfortable.
+        default:   "h-8  px-3.5 text-[12px]",
+        sm:        "h-7  px-2.5 text-[12px]",
+        xs:        "h-6  px-2   text-[11px]",
+        lg:        "h-9  px-5   text-[13px]",
+        icon:      "h-7  w-7",
+        "icon-xs": "h-6  w-6",
       },
     },
     defaultVariants: {

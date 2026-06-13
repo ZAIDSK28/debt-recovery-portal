@@ -92,19 +92,18 @@ function buildProductLabel(product: Product): string {
   return `${product.product_code} - ${product.name} (${product.category_name || product.category})`;
 }
 
-const InvoiceItemRow = memo(function InvoiceItemRow({
+// --- NEW: Product list row as a simple table row (no tile) ---
+const ProductListItem = memo(function ProductListItem({
   index,
   control,
   form,
   remove,
-  disableRemove,
   products,
 }: {
   index: number;
   control: Control<InvoiceFormValues>;
   form: UseFormReturn<InvoiceFormValues>;
   remove: (index: number) => void;
-  disableRemove: boolean;
   products: Product[];
 }) {
   const item = useWatch({
@@ -117,15 +116,6 @@ const InvoiceItemRow = memo(function InvoiceItemRow({
     [products, item?.product_id]
   );
 
-  const productOptions = useMemo(
-    () =>
-      products.map((product) => ({
-        value: String(product.id),
-        label: buildProductLabel(product),
-      })),
-    [products]
-  );
-
   const quantity = parseMoney(item?.quantity ?? "0");
   const price = parseMoney(selectedProduct?.price ?? "0");
   const taxRate = parseMoney(selectedProduct?.tax_rate ?? "0");
@@ -134,29 +124,19 @@ const InvoiceItemRow = memo(function InvoiceItemRow({
   const lineTotal = lineAmount + lineTax;
 
   return (
-    <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:border-sky-200 hover:bg-sky-50/30 xl:grid-cols-12">
-      <div className="space-y-2 xl:col-span-5">
-        <Label>Product</Label>
-        <Combobox
-          options={productOptions}
-          value={item?.product_id ?? ""}
-          placeholder="Select product"
-          searchPlaceholder="Search products..."
-          onChange={(value) =>
-            form.setValue(`items.${index}.product_id`, value, {
-              shouldDirty: true,
-              shouldTouch: true,
-              shouldValidate: true,
-            })
-          }
-        />
-        {form.formState.errors.items?.[index]?.product_id ? (
-          <p className="text-sm text-red-500">{form.formState.errors.items[index]?.product_id?.message}</p>
-        ) : null}
+    <div className="grid grid-cols-1 gap-3 border-b border-gray-100 py-3 first:pt-0 last:border-0 sm:grid-cols-12 sm:gap-2">
+      {/* Product Name */}
+      <div className="sm:col-span-4">
+        <div className="text-xs text-gray-500 sm:hidden">Product</div>
+        <div className="text-sm font-medium text-gray-800">{selectedProduct?.name || "—"}</div>
+        {selectedProduct?.product_code && (
+          <div className="text-xs text-gray-400">{selectedProduct.product_code}</div>
+        )}
       </div>
 
-      <div className="space-y-2 sm:max-w-[180px] xl:col-span-2 xl:max-w-none">
-        <Label>Quantity</Label>
+      {/* Quantity */}
+      <div className="sm:col-span-2">
+        <div className="text-xs text-gray-500 sm:hidden">Quantity</div>
         <Input
           type="number"
           step="0.01"
@@ -168,36 +148,49 @@ const InvoiceItemRow = memo(function InvoiceItemRow({
               shouldValidate: true,
             })
           }
+          className="h-8 text-sm"
         />
-        {form.formState.errors.items?.[index]?.quantity ? (
-          <p className="text-sm text-red-500">{form.formState.errors.items[index]?.quantity?.message}</p>
-        ) : null}
+        {form.formState.errors.items?.[index]?.quantity && (
+          <p className="text-xs text-red-500">{form.formState.errors.items[index]?.quantity?.message}</p>
+        )}
       </div>
 
-      <div className="space-y-2 sm:max-w-[180px] xl:col-span-1 xl:max-w-none">
-        <Label>Price</Label>
-        <Input value={selectedProduct ? formatCurrency(selectedProduct.price) : "—"} readOnly />
+      {/* Price (read-only) */}
+      <div className="sm:col-span-2">
+        <div className="text-xs text-gray-500 sm:hidden">Unit Price</div>
+        <Input
+          value={selectedProduct ? formatCurrency(price) : "—"}
+          readOnly
+          className="h-8 text-sm bg-gray-50"
+        />
       </div>
 
-      <div className="space-y-2 sm:max-w-[180px] xl:col-span-1 xl:max-w-none">
-        <Label>Tax %</Label>
-        <Input value={selectedProduct ? `${selectedProduct.tax_rate}%` : "—"} readOnly />
+      {/* Tax & Total combined */}
+      <div className="sm:col-span-3">
+        <div className="text-xs text-gray-500 sm:hidden">Details</div>
+        <div className="text-sm text-gray-700">
+          {selectedProduct ? (
+            <>
+              <span>Tax: {taxRate}%</span>
+              <span className="mx-1">•</span>
+              <span className="font-semibold">Total: {formatCurrency(lineTotal)}</span>
+            </>
+          ) : (
+            "—"
+          )}
+        </div>
       </div>
 
-      <div className="space-y-2 sm:max-w-[180px] xl:col-span-2 xl:max-w-none">
-        <Label>Estimated Total</Label>
-        <Input value={selectedProduct ? formatCurrency(lineTotal) : "—"} readOnly />
-      </div>
-
-      <div className="flex items-end xl:col-span-1">
+      {/* Delete button */}
+      <div className="sm:col-span-1 flex items-start justify-end sm:justify-center">
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           size="icon"
           onClick={() => remove(index)}
-          disabled={disableRemove}
+          className="h-7 w-7 rounded-full text-gray-400 hover:bg-red-50 hover:text-red-500"
         >
-          <Trash2 className="h-4 w-4 text-red-500" />
+          <Trash2 className="h-3.5 w-3.5" />
         </Button>
       </div>
     </div>
@@ -221,16 +214,18 @@ export function InvoiceForm({
   const updateMutation = useUpdateInvoiceReport(initialInvoice?.id ?? 0);
   const { data: routes = [] } = useRoutes();
   const { data: parties = [] } = useParties();
-  console.log("Parties for invoice form:", parties);
   const [productSearch, setProductSearch] = useState("");
   const { data: productsResponse } = useProducts({
     search: productSearch || undefined,
     page: 1,
     page_size: 50,
   });
-
   const products = productsResponse?.results ?? [];
   const isEditMode = Boolean(initialInvoice);
+
+  // State for the single product selection dropdown
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [selectedProductQuantity, setSelectedProductQuantity] = useState<string>("1");
 
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceFormSchema),
@@ -249,12 +244,7 @@ export function InvoiceForm({
       notes: "",
       terms: "",
       creation_mode: "printable_and_bill",
-      items: [
-        {
-          product_id: "",
-          quantity: "1.00",
-        },
-      ],
+      items: [],
     },
   });
 
@@ -282,7 +272,7 @@ export function InvoiceForm({
               product_id: item.product_id ? String(item.product_id) : "",
               quantity: item.quantity,
             }))
-          : [{ product_id: "", quantity: "1.00" }],
+          : [],
     });
   }, [initialInvoice, form]);
 
@@ -335,6 +325,11 @@ export function InvoiceForm({
     [outlets]
   );
 
+  const productOptions = useMemo(
+    () => products.map((product) => ({ value: String(product.id), label: buildProductLabel(product) })),
+    [products]
+  );
+
   const preview = useMemo(() => {
     const subtotal = watchedItems.reduce((sum, item) => {
       const product = products.find((entry) => String(entry.id) === item.product_id);
@@ -352,11 +347,7 @@ export function InvoiceForm({
     const discount = parseMoney(discountAmount || "0");
     const total = subtotal + taxAmount - discount;
 
-    return {
-      subtotal,
-      taxAmount,
-      total,
-    };
+    return { subtotal, taxAmount, total };
   }, [watchedItems, products, discountAmount]);
 
   useEffect(() => {
@@ -364,11 +355,36 @@ export function InvoiceForm({
     const missingSelectedIds = selectedIds.some(
       (id) => !products.some((product) => String(product.id) === id)
     );
-
     if (missingSelectedIds && selectedIds.length > 0) {
       setProductSearch((current) => (current ? current : selectedIds.join(" ")));
     }
   }, [watchedItems, products]);
+
+  // Add product from the single dropdown
+  const handleAddProduct = () => {
+    if (!selectedProductId) {
+      toast.error("Please select a product first.");
+      return;
+    }
+    const quantity = selectedProductQuantity;
+    if (!quantity || parseFloat(quantity) <= 0) {
+      toast.error("Please enter a valid quantity.");
+      return;
+    }
+    // Check if product already exists in list (optional, but we allow duplicates? Usually not)
+    const alreadyExists = watchedItems.some((item) => item.product_id === selectedProductId);
+    if (alreadyExists) {
+      toast.error("Product already added. Update quantity in the list instead.");
+      return;
+    }
+    append({
+      product_id: selectedProductId,
+      quantity: quantity,
+    });
+    // Reset selection
+    setSelectedProductId("");
+    setSelectedProductQuantity("1");
+  };
 
   async function submitForm(mode: SubmitMode) {
     const parsed = await form.trigger();
@@ -451,33 +467,34 @@ export function InvoiceForm({
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* Invoice Info Card - unchanged except SelectTrigger height */}
       <Card>
         <CardHeader>
           <CardTitle>Invoice Info</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="space-y-2">
-            <Label htmlFor="invoice_number">Invoice Number</Label>
-            <Input id="invoice_number" placeholder="Leave blank to auto-generate" {...form.register("invoice_number")} />
-            {form.formState.errors.invoice_number ? (
-              <p className="text-sm text-red-500">{form.formState.errors.invoice_number.message}</p>
-            ) : null}
+          <div className="space-y-1.5">
+            <Label htmlFor="invoice_number" className="text-sm font-semibold text-gray-700">Invoice Number</Label>
+            <Input id="invoice_number" placeholder="Leave blank to auto-generate" {...form.register("invoice_number")} className="h-9 text-sm" />
+            {form.formState.errors.invoice_number && (
+              <p className="text-xs text-red-500">{form.formState.errors.invoice_number.message}</p>
+            )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="invoice_date">Invoice Date</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="invoice_date" className="text-sm font-semibold text-gray-700">Invoice Date</Label>
             <DateInput
               value={invoiceDate ?? ""}
               onChange={(value) => form.setValue("invoice_date", value, { shouldValidate: true })}
               clearable
             />
-            {form.formState.errors.invoice_date ? (
-              <p className="text-sm text-red-500">{form.formState.errors.invoice_date.message}</p>
-            ) : null}
+            {form.formState.errors.invoice_date && (
+              <p className="text-xs text-red-500">{form.formState.errors.invoice_date.message}</p>
+            )}
           </div>
 
-          <div className="space-y-2">
-            <Label>Creation Mode</Label>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-semibold text-gray-700">Creation Mode</Label>
             <Select
               value={creationMode}
               onValueChange={(value) =>
@@ -488,31 +505,32 @@ export function InvoiceForm({
                 })
               }
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-9 text-sm">
                 <SelectValue placeholder="Select mode" />
               </SelectTrigger>
               <SelectContent>
                 {modeOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <SelectItem key={option.value} value={option.value} className="text-sm">
                     {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {form.formState.errors.creation_mode ? (
-              <p className="text-sm text-red-500">{form.formState.errors.creation_mode.message}</p>
-            ) : null}
+            {form.formState.errors.creation_mode && (
+              <p className="text-xs text-red-500">{form.formState.errors.creation_mode.message}</p>
+            )}
           </div>
         </CardContent>
       </Card>
 
+      {/* Party Details Card - unchanged */}
       <Card>
         <CardHeader>
           <CardTitle>Party Details</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="space-y-2 md:col-span-2">
-            <Label>Party</Label>
+          <div className="space-y-1.5 md:col-span-2">
+            <Label className="text-sm font-semibold text-gray-700">Party</Label>
             <Combobox
               options={partyOptions}
               value={selectedPartyId}
@@ -528,38 +546,39 @@ export function InvoiceForm({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="customer_name">Customer Name</Label>
-            <Input id="customer_name" {...form.register("customer_name")} />
-            {form.formState.errors.customer_name ? (
-              <p className="text-sm text-red-500">{form.formState.errors.customer_name.message}</p>
-            ) : null}
+          <div className="space-y-1.5">
+            <Label htmlFor="customer_name" className="text-sm font-semibold text-gray-700">Customer Name</Label>
+            <Input id="customer_name" {...form.register("customer_name")} className="h-9 text-sm" />
+            {form.formState.errors.customer_name && (
+              <p className="text-xs text-red-500">{form.formState.errors.customer_name.message}</p>
+            )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="customer_phone">Customer Phone</Label>
-            <Input id="customer_phone" {...form.register("customer_phone")} />
+          <div className="space-y-1.5">
+            <Label htmlFor="customer_phone" className="text-sm font-semibold text-gray-700">Customer Phone</Label>
+            <Input id="customer_phone" {...form.register("customer_phone")} className="h-9 text-sm" />
           </div>
 
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="customer_address">Customer Address</Label>
-            <Textarea id="customer_address" {...form.register("customer_address")} />
+          <div className="space-y-1.5 md:col-span-2">
+            <Label htmlFor="customer_address" className="text-sm font-semibold text-gray-700">Customer Address</Label>
+            <Textarea id="customer_address" {...form.register("customer_address")} className="text-sm" />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="gst_number">GST Number</Label>
-            <Input id="gst_number" {...form.register("gst_number")} />
+          <div className="space-y-1.5">
+            <Label htmlFor="gst_number" className="text-sm font-semibold text-gray-700">GST Number</Label>
+            <Input id="gst_number" {...form.register("gst_number")} className="h-9 text-sm" />
           </div>
         </CardContent>
       </Card>
 
+      {/* Bill Mapping Card - unchanged */}
       <Card>
         <CardHeader>
           <CardTitle>Bill Mapping</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="space-y-2">
-            <Label>Route</Label>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-semibold text-gray-700">Route</Label>
             <Combobox
               options={routeOptions}
               value={selectedRouteName}
@@ -581,13 +600,13 @@ export function InvoiceForm({
                 }
               }}
             />
-            {form.formState.errors.route_name ? (
-              <p className="text-sm text-red-500">{form.formState.errors.route_name.message}</p>
-            ) : null}
+            {form.formState.errors.route_name && (
+              <p className="text-xs text-red-500">{form.formState.errors.route_name.message}</p>
+            )}
           </div>
 
-          <div className="space-y-2">
-            <Label>Outlet</Label>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-semibold text-gray-700">Outlet</Label>
             <Combobox
               options={outletOptions}
               value={selectedOutletName}
@@ -602,127 +621,153 @@ export function InvoiceForm({
                 })
               }
             />
-            {form.formState.errors.outlet_name ? (
-              <p className="text-sm text-red-500">{form.formState.errors.outlet_name.message}</p>
-            ) : null}
+            {form.formState.errors.outlet_name && (
+              <p className="text-xs text-red-500">{form.formState.errors.outlet_name.message}</p>
+            )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="brand">Brand</Label>
-            <Input id="brand" {...form.register("brand")} />
-            {form.formState.errors.brand ? (
-              <p className="text-sm text-red-500">{form.formState.errors.brand.message}</p>
-            ) : null}
+          <div className="space-y-1.5">
+            <Label htmlFor="brand" className="text-sm font-semibold text-gray-700">Brand</Label>
+            <Input id="brand" {...form.register("brand")} className="h-9 text-sm" />
+            {form.formState.errors.brand && (
+              <p className="text-xs text-red-500">{form.formState.errors.brand.message}</p>
+            )}
           </div>
         </CardContent>
       </Card>
 
+      {/* PRODUCTS SECTION - REDESIGNED */}
       <Card>
         <CardHeader>
           <CardTitle>Products</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="max-w-sm space-y-2">
-            <Label htmlFor="product-search">Search Products</Label>
-            <Input
-              id="product-search"
-              placeholder="Search by code, name, or category..."
-              value={productSearch}
-              onChange={(event) => setProductSearch(event.target.value)}
-            />
+          {/* Single product selection row */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
+            <div className="sm:col-span-7">
+              <Label className="text-sm font-semibold text-gray-700">Select Product</Label>
+              <Combobox
+                options={productOptions}
+                value={selectedProductId}
+                placeholder="Search and select product..."
+                searchPlaceholder="Type product name, code or category..."
+                onChange={setSelectedProductId}
+              />
+            </div>
+            <div className="sm:col-span-3">
+              <Label className="text-sm font-semibold text-gray-700">Quantity</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={selectedProductQuantity}
+                onChange={(e) => setSelectedProductQuantity(e.target.value)}
+                className="h-9 text-sm"
+              />
+            </div>
+            <div className="sm:col-span-2 flex items-end">
+              <Button
+                type="button"
+                onClick={handleAddProduct}
+                className="h-9 w-full gap-1.5 text-sm"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add
+              </Button>
+            </div>
           </div>
 
-          {fields.map((field, index) => (
-            <InvoiceItemRow
-              key={field.id}
-              index={index}
-              control={form.control}
-              form={form}
-              remove={remove}
-              disableRemove={fields.length === 1}
-              products={products}
-            />
-          ))}
+          {/* Product list (compact rows) */}
+          {fields.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 py-8 text-center text-sm text-gray-500">
+              No products added. Select a product above and click "Add".
+            </div>
+          ) : (
+            <div className="mt-4 rounded-xl border border-gray-200 bg-white p-3">
+              {/* Header - hidden on mobile, visible on sm+ */}
+              <div className="hidden grid-cols-12 gap-2 border-b border-gray-200 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 sm:grid">
+                <div className="col-span-4">Product</div>
+                <div className="col-span-2">Quantity</div>
+                <div className="col-span-2">Unit Price</div>
+                <div className="col-span-3">Tax / Total</div>
+                <div className="col-span-1"></div>
+              </div>
+              {fields.map((field, index) => (
+                <ProductListItem
+                  key={field.id}
+                  index={index}
+                  control={form.control}
+                  form={form}
+                  remove={remove}
+                  products={products}
+                />
+              ))}
+            </div>
+          )}
 
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full sm:w-auto"
-            onClick={() =>
-              append({
-                product_id: "",
-                quantity: "1.00",
-              })
-            }
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Product
-          </Button>
-
-          {form.formState.errors.items ? (
-            <p className="text-sm text-red-500">{form.formState.errors.items.message as string}</p>
-          ) : null}
+          {form.formState.errors.items && (
+            <p className="text-xs text-red-500">{form.formState.errors.items.message as string}</p>
+          )}
         </CardContent>
       </Card>
 
+      {/* Discount & Preview Card - unchanged */}
       <Card>
         <CardHeader>
           <CardTitle>Discount & Preview</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="space-y-2">
-            <Label htmlFor="discount_amount">Discount Amount</Label>
-            <Input id="discount_amount" type="number" step="0.01" {...form.register("discount_amount")} />
-            {form.formState.errors.discount_amount ? (
-              <p className="text-sm text-red-500">{form.formState.errors.discount_amount.message}</p>
-            ) : null}
+          <div className="space-y-1.5">
+            <Label htmlFor="discount_amount" className="text-sm font-semibold text-gray-700">Discount Amount</Label>
+            <Input id="discount_amount" type="number" step="0.01" {...form.register("discount_amount")} className="h-9 text-sm" />
+            {form.formState.errors.discount_amount && (
+              <p className="text-xs text-red-500">{form.formState.errors.discount_amount.message}</p>
+            )}
           </div>
-
-          <div className="space-y-2">
-            <Label>Estimated Subtotal</Label>
-            <Input value={formatCurrency(preview.subtotal)} readOnly />
+          <div className="space-y-1.5">
+            <Label className="text-sm font-semibold text-gray-700">Subtotal</Label>
+            <Input value={formatCurrency(preview.subtotal)} readOnly className="h-9 text-sm bg-gray-50" />
           </div>
-
-          <div className="space-y-2">
-            <Label>Estimated Tax</Label>
-            <Input value={formatCurrency(preview.taxAmount)} readOnly />
+          <div className="space-y-1.5">
+            <Label className="text-sm font-semibold text-gray-700">Tax</Label>
+            <Input value={formatCurrency(preview.taxAmount)} readOnly className="h-9 text-sm bg-gray-50" />
           </div>
-
-          <div className="space-y-2">
-            <Label>Estimated Total</Label>
-            <Input value={formatCurrency(preview.total)} readOnly />
+          <div className="space-y-1.5">
+            <Label className="text-sm font-semibold text-gray-700">Total</Label>
+            <Input value={formatCurrency(preview.total)} readOnly className="h-9 text-sm bg-gray-50 font-semibold text-gray-900" />
           </div>
         </CardContent>
       </Card>
 
+      {/* Footer Card - unchanged */}
       <Card>
         <CardHeader>
           <CardTitle>Footer</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea id="notes" {...form.register("notes")} />
+          <div className="space-y-1.5">
+            <Label htmlFor="notes" className="text-sm font-semibold text-gray-700">Notes</Label>
+            <Textarea id="notes" {...form.register("notes")} className="text-sm" />
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="terms">Terms</Label>
-            <Textarea id="terms" {...form.register("terms")} />
+          <div className="space-y-1.5">
+            <Label htmlFor="terms" className="text-sm font-semibold text-gray-700">Terms</Label>
+            <Textarea id="terms" {...form.register("terms")} className="text-sm" />
           </div>
         </CardContent>
       </Card>
 
-      <div className="sticky bottom-3 z-10 rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-lg backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+      {/* Actions bar */}
+      <div className="sticky bottom-3 z-10 rounded-2xl border border-gray-200 bg-white/90 p-3 shadow-lg backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-          <Button type="button" className="w-full sm:w-auto" onClick={() => void submitForm("save")} disabled={isPending}>
+          <Button type="button" className="h-9 w-full sm:w-auto gap-1.5 text-sm" onClick={() => void submitForm("save")} disabled={isPending}>
             {isPending ? "Saving..." : isEditMode ? "Save Changes" : "Save Invoice"}
           </Button>
-          {!isEditMode ? (
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => void submitForm("save_and_view")} disabled={isPending}>
-              <Printer className="mr-2 h-4 w-4" />
+          {!isEditMode && (
+            <Button type="button" variant="outline" className="h-9 w-full sm:w-auto gap-1.5 text-sm" onClick={() => void submitForm("save_and_view")} disabled={isPending}>
+              <Printer className="h-3.5 w-3.5" />
               {isPending ? "Saving..." : "Save & View"}
             </Button>
-          ) : null}
+          )}
         </div>
       </div>
     </div>

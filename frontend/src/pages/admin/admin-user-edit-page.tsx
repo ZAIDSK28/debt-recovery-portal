@@ -1,8 +1,10 @@
 // src/pages/admin/admin-user-edit-page.tsx
 import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Button } from "@/components/ui/button";
 import { ResponsiveTableSkeleton } from "@/components/common/loading-state";
 import { UserForm } from "@/components/users/user-form";
 import { useUser } from "@/hooks/useUsers";
@@ -12,6 +14,8 @@ export default function AdminUserEditPage() {
   const params = useParams();
   const userId = Number(params.id);
   const query = useUser(userId, Number.isFinite(userId));
+
+  const handleBack = () => navigate("/admin/users");
 
   if (!Number.isFinite(userId)) {
     return (
@@ -27,6 +31,12 @@ export default function AdminUserEditPage() {
         <PageHeader
           title="Edit User"
           description="Update user profile, role, and active status."
+          actions={
+            <Button variant="outline" onClick={handleBack} className="h-9 gap-1.5 text-sm">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Users
+            </Button>
+          }
         />
 
         {query.isLoading ? (
@@ -34,7 +44,7 @@ export default function AdminUserEditPage() {
         ) : !query.data ? (
           <EmptyState title="User not found" description="The requested user could not be loaded." />
         ) : (
-          <div className="rounded-[18px] border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             <UserForm
               user={query.data}
               onSuccess={() => {
