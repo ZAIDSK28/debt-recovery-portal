@@ -1,5 +1,5 @@
 // src/components/payments/payment-form-modal.tsx
-import { useEffect, useMemo, useRef } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { z } from "zod";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -34,58 +34,23 @@ const paymentSchema = z
   })
   .superRefine((values, ctx) => {
     const method = values.payment_method;
-
     if (method === "upi" && !values.transaction_number?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Transaction number is required",
-        path: ["transaction_number"],
-      });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Transaction number is required", path: ["transaction_number"] });
     }
-
     if (method === "cheque" || method === "electronic") {
-      if (!values.cheque_number?.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Cheque number is required",
-          path: ["cheque_number"],
-        });
-      }
-      if (!values.cheque_date?.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Cheque date is required",
-          path: ["cheque_date"],
-        });
-      }
-      if (!values.cheque_type) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Cheque type is required",
-          path: ["cheque_type"],
-        });
-      }
-      if (!values.firm) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Firm is required",
-          path: ["firm"],
-        });
-      }
+      if (!values.cheque_number?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Cheque number is required", path: ["cheque_number"] });
+      if (!values.cheque_date?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Cheque date is required", path: ["cheque_date"] });
+      if (!values.cheque_type) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Cheque type is required", path: ["cheque_type"] });
+      if (!values.firm) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Firm is required", path: ["firm"] });
     }
-
     if (method === "electronic" && !values.transaction_number?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Transaction number is required",
-        path: ["transaction_number"],
-      });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Transaction number is required", path: ["transaction_number"] });
     }
   });
 
 type PaymentFormValues = z.infer<typeof paymentSchema>;
 
-export function PaymentFormModal({
+export const PaymentFormModal = memo(function PaymentFormModal({
   open,
   onOpenChange,
   bill,
@@ -136,7 +101,7 @@ export function PaymentFormModal({
 
   const remainingAmount = useMemo(() => Number(bill?.remaining_amount ?? 0), [bill]);
 
-  async function onSubmit(values: PaymentFormValues) {
+  const onSubmit = useCallback(async (values: PaymentFormValues) => {
     if (!bill || submitLockRef.current || mutation.isPending) return;
 
     const numericAmount = Number(values.amount);
@@ -144,14 +109,12 @@ export function PaymentFormModal({
       toast.error("Amount must be greater than zero.");
       return;
     }
-
     if (numericAmount > remainingAmount) {
       toast.error("Amount cannot exceed remaining amount.");
       return;
     }
 
     submitLockRef.current = true;
-
     try {
       await mutation.mutateAsync({
         billId: bill.id,
@@ -166,30 +129,25 @@ export function PaymentFormModal({
           firm: values.firm,
         },
       });
-
-      const immediateClear =
-        (values.payment_method === "cash" || values.payment_method === "upi") &&
-        numericAmount === remainingAmount;
-
       toast.success("Payment recorded");
       onOpenChange(false);
       onBillCleared();
-
-      if (immediateClear) {
-        onBillCleared();
-      }
     } catch (error) {
       toast.error(getApiError(error));
     } finally {
       submitLockRef.current = false;
     }
-  }
+  }, [bill, mutation, onOpenChange, onBillCleared, remainingAmount]);
+
+  const handleFormSubmit = useCallback(() => {
+    form.handleSubmit(onSubmit)();
+  }, [form, onSubmit]);
 
   if (!bill) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="z-[100] max-w-xl">
         <DialogHeader>
           <DialogTitle>Record Payment</DialogTitle>
         </DialogHeader>
@@ -203,15 +161,15 @@ export function PaymentFormModal({
             </p>
           </div>
 
-          <form id="payment-form" className="grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={form.handleSubmit(onSubmit)}>
+          <form className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {/* AMOUNT */}
             <div className="space-y-2 md:col-span-1">
               <Label htmlFor="amount">Amount</Label>
               <Input id="amount" type="number" step="0.01" {...form.register("amount")} disabled={mutation.isPending} />
-              {form.formState.errors.amount ? (
-                <p className="text-sm text-red-500">{form.formState.errors.amount.message}</p>
-              ) : null}
+              {form.formState.errors.amount && <p className="text-sm text-red-500">{form.formState.errors.amount.message}</p>}
             </div>
 
+            {/* PAYMENT METHOD */}
             <div className="space-y-2 md:col-span-1">
               <Label>Payment Method</Label>
               <Select
@@ -236,24 +194,22 @@ export function PaymentFormModal({
               </Select>
             </div>
 
+            {/* UPI / ELECTRONIC TRANSACTION NUMBER */}
             {(method === "upi" || method === "electronic") && (
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="transaction_number">Transaction Number</Label>
                 <Input id="transaction_number" {...form.register("transaction_number")} disabled={mutation.isPending} />
-                {form.formState.errors.transaction_number ? (
-                  <p className="text-sm text-red-500">{form.formState.errors.transaction_number.message}</p>
-                ) : null}
+                {form.formState.errors.transaction_number && <p className="text-sm text-red-500">{form.formState.errors.transaction_number.message}</p>}
               </div>
             )}
 
+            {/* CHEQUE / ELECTRONIC FIELDS */}
             {(method === "cheque" || method === "electronic") && (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="cheque_number">Cheque Number</Label>
                   <Input id="cheque_number" {...form.register("cheque_number")} disabled={mutation.isPending} />
-                  {form.formState.errors.cheque_number ? (
-                    <p className="text-sm text-red-500">{form.formState.errors.cheque_number.message}</p>
-                  ) : null}
+                  {form.formState.errors.cheque_number && <p className="text-sm text-red-500">{form.formState.errors.cheque_number.message}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -261,18 +217,12 @@ export function PaymentFormModal({
                   <DateInput
                     value={chequeDate ?? ""}
                     onChange={(value) =>
-                      form.setValue("cheque_date", value, {
-                        shouldDirty: true,
-                        shouldTouch: true,
-                        shouldValidate: true,
-                      })
+                      form.setValue("cheque_date", value, { shouldDirty: true, shouldTouch: true, shouldValidate: true })
                     }
                     clearable
                     disabled={mutation.isPending}
                   />
-                  {form.formState.errors.cheque_date ? (
-                    <p className="text-sm text-red-500">{form.formState.errors.cheque_date.message}</p>
-                  ) : null}
+                  {form.formState.errors.cheque_date && <p className="text-sm text-red-500">{form.formState.errors.cheque_date.message}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -296,9 +246,7 @@ export function PaymentFormModal({
                       <SelectItem value="imps">IMPS</SelectItem>
                     </SelectContent>
                   </Select>
-                  {form.formState.errors.cheque_type ? (
-                    <p className="text-sm text-red-500">{form.formState.errors.cheque_type.message}</p>
-                  ) : null}
+                  {form.formState.errors.cheque_type && <p className="text-sm text-red-500">{form.formState.errors.cheque_type.message}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -321,9 +269,7 @@ export function PaymentFormModal({
                       <SelectItem value="MZ">MZ</SelectItem>
                     </SelectContent>
                   </Select>
-                  {form.formState.errors.firm ? (
-                    <p className="text-sm text-red-500">{form.formState.errors.firm.message}</p>
-                  ) : null}
+                  {form.formState.errors.firm && <p className="text-sm text-red-500">{form.formState.errors.firm.message}</p>}
                 </div>
               </>
             )}
@@ -334,11 +280,11 @@ export function PaymentFormModal({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
             Cancel
           </Button>
-          <Button form="payment-form" type="submit" disabled={mutation.isPending}>
+          <Button type="button" onClick={handleFormSubmit} disabled={mutation.isPending}>
             {mutation.isPending ? "Saving..." : "Record Payment"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-}
+});

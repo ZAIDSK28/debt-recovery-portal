@@ -250,9 +250,13 @@ def import_bills_from_excel(file, job: BillImportJob | None = None) -> dict:
             if Bill.objects.filter(invoice_number=invoice_number).exists():
                 raise ValueError("invoice_number already exists")
 
+            # --- Normalize case for route and outlet names (title case) ---
+            normalized_route_name = route_name.strip().title()
+            normalized_outlet_name = outlet_name.strip().title()
+
             with transaction.atomic():
-                route, _ = Route.objects.get_or_create(name=route_name)
-                outlet, _ = Outlet.objects.get_or_create(name=outlet_name, route=route)
+                route, _ = Route.objects.get_or_create(name=normalized_route_name)
+                outlet, _ = Outlet.objects.get_or_create(name=normalized_outlet_name, route=route)
                 assigned_user = _resolve_assigned_user(assigned_to_value)
 
                 Bill.objects.create(
