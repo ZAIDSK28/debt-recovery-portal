@@ -6,13 +6,16 @@ from django.db import transaction
 from rest_framework import serializers
 
 from bills.models import Bill
-from products.models import Product, StockItem, StockMovement
+from products.models import Product, StockItem, StockMovement, Warehouse
 from reports.models import InvoiceSequenceSetting, Party, PrintableInvoice, PrintableInvoiceItem
 from reports.services import (
     build_payload_items,
     invoice_has_payments,
     replace_invoice_items,
     sync_invoice_to_bill,
+    validate_stock_for_items,
+    deduct_stock_for_items,
+    restore_stock_for_items,
 )
 
 TWOPLACES = Decimal("0.01")
@@ -20,162 +23,6 @@ TWOPLACES = Decimal("0.01")
 
 def q(value: Decimal) -> Decimal:
     return value.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
-
-
-# ─── Stock helpers ────────────────────────────────────────────────────────────
-
-def _validate_stock_for_items(computed_items: list[dict]) -> None:
-    """
-    Pre-save stock gate — called from validate() before anything is written.
-    Raises ValidationError listing every line item that cannot be fulfilled
-    so the user gets all errors at once, not one at a time.
-
-    A product with no StockItem record at all is treated as zero stock.
-    Partial fulfilment is not allowed: the full invoiced quantity must be
-    available in a single warehouse.
-    """
-    errors: list[str] = []
-
-    for item in computed_items:
-        product: Product | None = item.get("product")
-        quantity: Decimal = item.get("quantity", Decimal("0.00"))
-
-        if product is None or quantity <= Decimal("0.00"):
-            continue
-
-        # Best available stock row for this product (highest quantity)
-        stock_item: StockItem | None = (
-            StockItem.objects.filter(
-                product=product,
-                warehouse__is_active=True,
-            )
-            .order_by("-quantity")
-            .first()
-        )
-
-        if stock_item is None:
-            errors.append(
-                f"'{product.name}' ({product.product_code}) has no stock record. "
-                "Record an IN movement before invoicing this product."
-            )
-        elif stock_item.quantity <= Decimal("0.00"):
-            errors.append(
-                f"'{product.name}' ({product.product_code}) is out of stock "
-                f"(warehouse: {stock_item.warehouse.name})."
-            )
-        elif quantity > stock_item.quantity:
-            errors.append(
-                f"'{product.name}' ({product.product_code}): requested {quantity}, "
-                f"only {stock_item.quantity} available in '{stock_item.warehouse.name}'."
-            )
-
-    if errors:
-        raise serializers.ValidationError({"items": errors})
-
-
-def _deduct_stock_for_items(computed_items: list[dict], invoice_number: str) -> None:
-    """
-    Deducts stock inside a transaction.atomic() block (called from create/update).
-    Validation has already passed, but we use select_for_update() to guard
-    against concurrent requests that pass validation simultaneously.
-    Raises ValidationError on race condition so the transaction is rolled back.
-    """
-    note = f"Invoice {invoice_number}"
-
-    for item in computed_items:
-        product: Product | None = item.get("product")
-        quantity: Decimal = item.get("quantity", Decimal("0.00"))
-
-        if product is None or quantity <= Decimal("0.00"):
-            continue
-
-        stock_item: StockItem | None = (
-            StockItem.objects.select_for_update()
-            .filter(product=product, warehouse__is_active=True)
-            .order_by("-quantity")
-            .first()
-        )
-
-        if stock_item is None or stock_item.quantity < quantity:
-            raise serializers.ValidationError(
-                {
-                    "items": (
-                        f"Stock for '{product.name}' changed between validation and save "
-                        "(concurrent request). Please retry."
-                    )
-                }
-            )
-
-        stock_item.quantity -= quantity
-        stock_item.save(update_fields=["quantity", "updated_at"])
-
-        StockMovement.objects.create(
-            product=product,
-            warehouse=stock_item.warehouse,
-            movement_type=StockMovement.MovementType.OUT,
-            quantity=quantity,
-            note=note,
-        )
-
-
-def _restore_stock_for_items(items_qs, invoice_number: str) -> None:
-    """
-    Return stock for an existing set of invoice items (used when invoice items
-    are replaced during an edit).
-
-    For each item, credit stock back to whichever warehouse last recorded an
-    OUT movement for this product with the matching invoice note. If no such
-    movement can be found, credit to the warehouse with the most stock of that
-    product (fallback).
-    """
-    note = f"Invoice {invoice_number}"
-
-    for item in items_qs:
-        product: Product | None = item.product
-        quantity: Decimal = item.quantity
-
-        if product is None or quantity <= Decimal("0.00"):
-            continue
-
-        # Find the OUT movement we originally created for this invoice+product
-        original_movement = (
-            StockMovement.objects.filter(
-                product=product,
-                movement_type=StockMovement.MovementType.OUT,
-                note=note,
-            )
-            .order_by("-id")
-            .first()
-        )
-
-        if original_movement is not None:
-            warehouse = original_movement.warehouse
-        else:
-            # Fallback: return to warehouse with most current stock
-            stock_item = (
-                StockItem.objects.filter(product=product, warehouse__is_active=True)
-                .order_by("-quantity")
-                .first()
-            )
-            if stock_item is None:
-                continue
-            warehouse = stock_item.warehouse
-
-        stock_item, _ = StockItem.objects.select_for_update().get_or_create(
-            product=product,
-            warehouse=warehouse,
-            defaults={"quantity": Decimal("0.00")},
-        )
-        stock_item.quantity += quantity
-        stock_item.save(update_fields=["quantity", "updated_at"])
-
-        StockMovement.objects.create(
-            product=product,
-            warehouse=warehouse,
-            movement_type=StockMovement.MovementType.IN,
-            quantity=quantity,
-            note=f"Reversal — {note} (edit)",
-        )
 
 
 # ─── Party & sequence serializers ─────────────────────────────────────────────
@@ -215,6 +62,8 @@ class PrintableInvoiceItemSerializer(serializers.ModelSerializer):
     product_code = serializers.CharField(source="product.product_code", read_only=True)
     product_name = serializers.CharField(source="product.name", read_only=True)
     category = serializers.CharField(source="product.category", read_only=True)
+    warehouse_id = serializers.IntegerField(source="warehouse.id", read_only=True)
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
 
     class Meta:
         model = PrintableInvoiceItem
@@ -224,6 +73,8 @@ class PrintableInvoiceItemSerializer(serializers.ModelSerializer):
             "product_code",
             "product_name",
             "category",
+            "warehouse_id",
+            "warehouse_name",
             "description",
             "quantity",
             "rate",
@@ -301,6 +152,11 @@ class PrintableInvoiceCreateItemInputSerializer(serializers.Serializer):
         queryset=Product.objects.filter(is_active=True),
         source="product",
     )
+    warehouse_id = serializers.PrimaryKeyRelatedField(
+        queryset=Warehouse.objects.filter(is_active=True),
+        source="warehouse",
+        help_text="The warehouse from which to deduct stock for this product."
+    )
     quantity = serializers.DecimalField(max_digits=12, decimal_places=2)
 
     def validate_quantity(self, value):
@@ -323,6 +179,7 @@ class _InvoiceComputationMixin:
 
         for item in items:
             product = item["product"]
+            warehouse = item["warehouse"]
             quantity = item["quantity"]
 
             amount = q(product.price * quantity)
@@ -335,6 +192,7 @@ class _InvoiceComputationMixin:
             computed_items.append(
                 {
                     "product": product,
+                    "warehouse": warehouse,
                     "description": product.name,
                     "quantity": quantity,
                     "rate": q(product.price),
@@ -395,8 +253,8 @@ class _InvoiceComputationMixin:
 
     def _compute_from_existing_items(self, invoice, attrs):
         existing_items = [
-            {"product": item.product, "quantity": item.quantity}
-            for item in invoice.items.select_related("product").all()
+            {"product": item.product, "warehouse": item.warehouse, "quantity": item.quantity}
+            for item in invoice.items.select_related("product", "warehouse").all()
         ]
         merged = {
             "items": existing_items,
@@ -472,9 +330,8 @@ class PrintableInvoiceCreateSerializer(_InvoiceComputationMixin, serializers.Ser
 
         attrs = self._compute(attrs)
 
-        # Validate stock availability for every line item BEFORE saving anything.
-        # _compute() populates _computed_items with resolved Product instances.
-        _validate_stock_for_items(attrs["_computed_items"])
+        # Validate stock availability for each line item (specific warehouse)
+        validate_stock_for_items(attrs["_computed_items"])
 
         return attrs
 
@@ -506,8 +363,8 @@ class PrintableInvoiceCreateSerializer(_InvoiceComputationMixin, serializers.Ser
 
             replace_invoice_items(printable_invoice, computed_items)
 
-            # Deduct stock for each product line item
-            _deduct_stock_for_items(computed_items, printable_invoice.invoice_number)
+            # Deduct stock from specified warehouses
+            deduct_stock_for_items(computed_items, printable_invoice.invoice_number)
 
             sync_invoice_to_bill(printable_invoice)
 
@@ -600,10 +457,8 @@ class PrintableInvoiceUpdateSerializer(_InvoiceComputationMixin, serializers.Ser
         if "items" in attrs:
             merged["items"] = attrs["items"]
             computed = self._compute(merged)
-            # Validate stock for the new item set before allowing the update.
-            # We restore old stock first (inside the transaction), so here we
-            # check against current on-hand levels as a pre-flight guard.
-            _validate_stock_for_items(computed["_computed_items"])
+            # Validate stock for the new item set
+            validate_stock_for_items(computed["_computed_items"])
             return computed
 
         if "discount_amount" in attrs:
@@ -636,7 +491,7 @@ class PrintableInvoiceUpdateSerializer(_InvoiceComputationMixin, serializers.Ser
 
             # Capture old items BEFORE replacing them so we can restore their stock
             if items_are_changing:
-                old_items = list(instance.items.select_related("product").all())
+                old_items = list(instance.items.select_related("product", "warehouse").all())
 
             for field, value in validated_data.items():
                 setattr(instance, field, value)
@@ -652,13 +507,13 @@ class PrintableInvoiceUpdateSerializer(_InvoiceComputationMixin, serializers.Ser
 
             if items_are_changing:
                 # 1. Restore stock consumed by the old item set
-                _restore_stock_for_items(old_items, instance.invoice_number)
+                restore_stock_for_items(old_items, instance.invoice_number)
 
                 # 2. Replace the item rows
                 replace_invoice_items(instance, computed_items)
 
                 # 3. Deduct stock for the new item set
-                _deduct_stock_for_items(computed_items, instance.invoice_number)
+                deduct_stock_for_items(computed_items, instance.invoice_number)
 
             sync_invoice_to_bill(instance)
 

@@ -124,7 +124,7 @@ export default function InvoiceDetailPage() {
           <EmptyState title="Invoice not found" description="The requested invoice could not be loaded." />
         ) : (
           <>
-            {/* Info grid */}
+            {/* Info grid (unchanged) */}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <Card className="border-gray-200 shadow-sm">
                 <CardHeader>
@@ -235,7 +235,7 @@ export default function InvoiceDetailPage() {
               </Card>
             </div>
 
-            {/* Items table */}
+            {/* Items table with warehouse columns */}
             <Card className="border-gray-200 shadow-sm">
               <CardHeader>
                 <CardTitle className="text-base font-semibold">Items</CardTitle>
@@ -247,6 +247,7 @@ export default function InvoiceDetailPage() {
                       <tr>
                         <TH>Product Code</TH>
                         <TH>Product Name</TH>
+                        <TH>Warehouse</TH>
                         <TH>Category</TH>
                         <TH>Description</TH>
                         <TH>Qty</TH>
@@ -262,6 +263,7 @@ export default function InvoiceDetailPage() {
                         <tr key={item.id} className="border-t border-gray-100">
                           <TD>{item.product_code || "—"}</TD>
                           <TD>{item.product_name || "—"}</TD>
+                          <TD>{item.warehouse_name || "—"}</TD>
                           <TD>{item.category || "—"}</TD>
                           <TD className="whitespace-normal break-words">{item.description || "—"}</TD>
                           <TD>{item.quantity}</TD>
@@ -298,7 +300,7 @@ export default function InvoiceDetailPage() {
               </Card>
             </div>
 
-            {/* Mobile bottom bar */}
+            {/* Mobile bottom bar (unchanged) */}
             <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white/95 p-3 backdrop-blur sm:hidden">
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleBack} className="flex-1 h-9 text-sm">Back</Button>

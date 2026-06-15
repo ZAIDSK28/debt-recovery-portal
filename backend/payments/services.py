@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from django.db.models import Sum
-
 from bills.models import Bill
 from payments.models import Payment
+from django.db.models import Q, Sum, Value
+from django.db.models.functions import Coalesce
+
 
 
 IMMEDIATE_METHODS = {Payment.PaymentMethod.CASH, Payment.PaymentMethod.UPI}
@@ -19,18 +20,23 @@ def models_sum(field_name: str):
 
 
 def get_effective_paid_amount_for_bill(bill: Bill) -> Decimal:
-    immediate_total = (
-        bill.payments.filter(payment_method__in=IMMEDIATE_METHODS).aggregate(total=models_sum("amount"))["total"]
-        or Decimal("0.00")
+    totals = bill.payments.aggregate(
+        immediate=Coalesce(
+            Sum("amount", filter=Q(payment_method__in=IMMEDIATE_METHODS)),
+            Value(Decimal("0.00")),
+        ),
+        conditional=Coalesce(
+            Sum(
+                "amount",
+                filter=Q(
+                    payment_method__in=CONDITIONAL_METHODS,
+                    cheque_status=Payment.ChequeStatus.CLEARED,
+                ),
+            ),
+            Value(Decimal("0.00")),
+        ),
     )
-    conditional_total = (
-        bill.payments.filter(
-            payment_method__in=CONDITIONAL_METHODS,
-            cheque_status=Payment.ChequeStatus.CLEARED,
-        ).aggregate(total=models_sum("amount"))["total"]
-        or Decimal("0.00")
-    )
-    return immediate_total + conditional_total
+    return totals["immediate"] + totals["conditional"]
 
 
 def reconcile_bill_from_payments(bill: Bill) -> Bill:

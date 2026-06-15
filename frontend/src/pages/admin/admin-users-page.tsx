@@ -32,7 +32,6 @@ export default function AdminUsersPage() {
   const activateMutation = useActivateUser();
   const deactivateMutation = useDeactivateUser();
 
-  // Client-side search (users endpoint returns all — no backend pagination)
   const rows = useMemo(() => {
     const all = usersQuery.data ?? [];
     const term = search.trim().toLowerCase();
@@ -58,7 +57,15 @@ export default function AdminUsersPage() {
     [activateMutation, deactivateMutation],
   );
 
-  const columns: DataTableColumn<User>[] = [
+  const handleEdit = useCallback((id: number) => {
+    navigate(`/admin/users/${id}/edit`);
+  }, [navigate]);
+
+  const handleSetPassword = useCallback((id: number) => {
+    setPasswordUserId(id);
+  }, []);
+
+  const columns = useMemo<DataTableColumn<User>[]>(() => [
     {
       key: "username",
       header: "Username",
@@ -106,27 +113,24 @@ export default function AdminUsersPage() {
       cellClassName: "w-[100px]",
       render: (r) => (
         <div className="flex items-center justify-end gap-0.5">
-          {/* Edit */}
           <Button
             variant="ghost"
             size="icon"
             title="Edit user"
-            onClick={() => navigate(`/admin/users/${r.id}/edit`)}
+            onClick={() => handleEdit(r.id)}
           >
             <Pencil className="h-3.5 w-3.5" />
           </Button>
 
-          {/* Set password */}
           <Button
             variant="ghost"
             size="icon"
             title="Set password"
-            onClick={() => setPasswordUserId(r.id)}
+            onClick={() => handleSetPassword(r.id)}
           >
             <KeyRound className="h-3.5 w-3.5" />
           </Button>
 
-          {/* Toggle active */}
           <Button
             variant="ghost"
             size="icon"
@@ -148,7 +152,7 @@ export default function AdminUsersPage() {
         </div>
       ),
     },
-  ];
+  ], [handleEdit, handleSetPassword, handleToggleActive, activateMutation.isPending, deactivateMutation.isPending]);
 
   return (
     <AppShell>

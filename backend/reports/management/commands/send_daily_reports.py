@@ -23,7 +23,9 @@ IST = pytz.timezone("Asia/Kolkata")
 
 class Command(BaseCommand):
     help = (
-        "Compile today’s payments… [truncated for brevity] …and email an Excel file."
+        "Compile today's payments (cash, UPI, cleared cheques/electronic) and email "
+        "an Excel report to DAILY_REPORT_RECIPIENTS. Cleared cheque/electronic payments "
+        "are included only if cheque_date equals today (business requirement)."
     )
 
     def handle(self, *args, **options):
@@ -34,12 +36,14 @@ class Command(BaseCommand):
             .select_related("bill__outlet__route")
             .order_by("created_at")
         )
+
         if not payments_qs.exists():
             msg = f"No payments found for {today}; skipping email."
             self.stdout.write(self.style.WARNING(msg))
             logger.info(msg)
             return
 
+        # Cash total – all cash payments made today
         cash_total = Payment.objects.filter(
             payment_method="cash", created_at__date=today
         ).aggregate(
@@ -49,6 +53,7 @@ class Command(BaseCommand):
             )
         )["total"]
 
+        # UPI total – all UPI payments made today
         upi_total = Payment.objects.filter(
             payment_method="upi", created_at__date=today
         ).aggregate(
@@ -58,6 +63,8 @@ class Command(BaseCommand):
             )
         )["total"]
 
+        # Cheque/electronic cleared total – only those where cheque_date == today
+        # (business requirement: count only when the cheque date matches the report date)
         cheque_total = Payment.objects.filter(
             payment_method__in=["cheque", "electronic"],
             cheque_status="cleared",
@@ -116,6 +123,7 @@ class Command(BaseCommand):
             workbook = writer.book
             sheet = workbook.create_sheet("DailyPaymentsReport", 0)
 
+            # Summary row (cash, upi, cheque totals)
             sheet.append(
                 [
                     "Cash Total",
@@ -126,11 +134,13 @@ class Command(BaseCommand):
                     float(cheque_total),
                 ]
             )
-            sheet.append([])
+            sheet.append([])  # empty row separator
 
+            # Write the detail rows
             for r in openpyxl.utils.dataframe.dataframe_to_rows(df, index=False, header=True):
                 sheet.append(r)
 
+            # Auto-size columns
             for idx, col in enumerate(df.columns, 1):
                 max_len = max(len(str(col)), *(len(str(cell)) for cell in df[col].values)) + 2
                 sheet.column_dimensions[openpyxl.utils.get_column_letter(idx)].width = max_len

@@ -15,13 +15,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DateInput } from "@/components/ui/date-input";
 import { useCreateInvoiceReport, useUpdateInvoiceReport } from "@/hooks/useInvoices";
 import { useOutlets, useRoutes } from "@/hooks/useRoutes";
-import { useProducts } from "@/hooks/useProducts";
+import { useProducts, useWarehouses } from "@/hooks/useProducts";
 import { useParties } from "@/hooks/useParties";
 import { formatCurrency, getApiError } from "@/lib/utils";
-import type { CreateInvoiceReportPayload, InvoiceCreationMode, InvoiceReport, Product } from "@/types";
+import type { CreateInvoiceReportPayload, InvoiceCreationMode, InvoiceReport, Product, Warehouse } from "@/types";
 
 const itemSchema = z.object({
   product_id: z.string().min(1, "Product is required"),
+  warehouse_id: z.string().min(1, "Warehouse is required"),
   quantity: z.string().min(1, "Quantity is required"),
 });
 
@@ -92,19 +93,20 @@ function buildProductLabel(product: Product): string {
   return `${product.product_code} - ${product.name} (${product.category_name || product.category})`;
 }
 
-// --- NEW: Product list row as a simple table row (no tile) ---
 const ProductListItem = memo(function ProductListItem({
   index,
   control,
   form,
   remove,
   products,
+  warehouses,
 }: {
   index: number;
   control: Control<InvoiceFormValues>;
   form: UseFormReturn<InvoiceFormValues>;
   remove: (index: number) => void;
   products: Product[];
+  warehouses: Warehouse[];
 }) {
   const item = useWatch({
     control,
@@ -116,6 +118,11 @@ const ProductListItem = memo(function ProductListItem({
     [products, item?.product_id]
   );
 
+  const warehouseOptions = useMemo(
+    () => warehouses.map((w) => ({ value: String(w.id), label: w.name })),
+    [warehouses]
+  );
+
   const quantity = parseMoney(item?.quantity ?? "0");
   const price = parseMoney(selectedProduct?.price ?? "0");
   const taxRate = parseMoney(selectedProduct?.tax_rate ?? "0");
@@ -125,12 +132,35 @@ const ProductListItem = memo(function ProductListItem({
 
   return (
     <div className="grid grid-cols-1 gap-3 border-b border-gray-100 py-3 first:pt-0 last:border-0 sm:grid-cols-12 sm:gap-2">
-      {/* Product Name */}
-      <div className="sm:col-span-4">
+      {/* Product name */}
+      <div className="sm:col-span-3">
         <div className="text-xs text-gray-500 sm:hidden">Product</div>
         <div className="text-sm font-medium text-gray-800">{selectedProduct?.name || "—"}</div>
         {selectedProduct?.product_code && (
           <div className="text-xs text-gray-400">{selectedProduct.product_code}</div>
+        )}
+      </div>
+
+      {/* Warehouse dropdown - separate column */}
+      <div className="sm:col-span-2">
+        <div className="text-xs text-gray-500 sm:hidden">Warehouse</div>
+        <Combobox
+          options={warehouseOptions}
+          value={item?.warehouse_id ?? ""}
+          placeholder="Select warehouse"
+          searchPlaceholder="Search warehouse..."
+          onChange={(value) =>
+            form.setValue(`items.${index}.warehouse_id`, value, {
+              shouldDirty: true,
+              shouldTouch: true,
+              shouldValidate: true,
+            })
+          }
+        />
+        {form.formState.errors.items?.[index]?.warehouse_id && (
+          <p className="mt-1 text-xs text-red-500">
+            {form.formState.errors.items[index]?.warehouse_id?.message}
+          </p>
         )}
       </div>
 
@@ -166,8 +196,8 @@ const ProductListItem = memo(function ProductListItem({
       </div>
 
       {/* Tax & Total combined */}
-      <div className="sm:col-span-3">
-        <div className="text-xs text-gray-500 sm:hidden">Details</div>
+      <div className="sm:col-span-2">
+        <div className="text-xs text-gray-500 sm:hidden">Tax / Total</div>
         <div className="text-sm text-gray-700">
           {selectedProduct ? (
             <>
@@ -214,6 +244,7 @@ export function InvoiceForm({
   const updateMutation = useUpdateInvoiceReport(initialInvoice?.id ?? 0);
   const { data: routes = [] } = useRoutes();
   const { data: parties = [] } = useParties();
+  const { data: warehouses = [] } = useWarehouses({ is_active: true });
   const [productSearch, setProductSearch] = useState("");
   const { data: productsResponse } = useProducts({
     search: productSearch || undefined,
@@ -223,9 +254,13 @@ export function InvoiceForm({
   const products = productsResponse?.results ?? [];
   const isEditMode = Boolean(initialInvoice);
 
-  // State for the single product selection dropdown
+  // State for the single product selection row
   const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>("");
   const [selectedProductQuantity, setSelectedProductQuantity] = useState<string>("1");
+  
+  // Flag to disable button during redirect after successful save
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceFormSchema),
@@ -270,6 +305,7 @@ export function InvoiceForm({
         initialInvoice.items.length > 0
           ? initialInvoice.items.map((item) => ({
               product_id: item.product_id ? String(item.product_id) : "",
+              warehouse_id: item.warehouse_id ? String(item.warehouse_id) : "",
               quantity: item.quantity,
             }))
           : [],
@@ -296,7 +332,6 @@ export function InvoiceForm({
 
   useEffect(() => {
     if (!selectedParty) return;
-
     form.setValue("customer_name", selectedParty.name, { shouldDirty: true, shouldValidate: true });
     form.setValue("customer_address", selectedParty.address || "", { shouldDirty: true, shouldValidate: true });
     form.setValue("customer_phone", selectedParty.phone || "", { shouldDirty: true, shouldValidate: true });
@@ -330,6 +365,11 @@ export function InvoiceForm({
     [products]
   );
 
+  const warehouseOptions = useMemo(
+    () => warehouses.map((w) => ({ value: String(w.id), label: w.name })),
+    [warehouses]
+  );
+
   const preview = useMemo(() => {
     const subtotal = watchedItems.reduce((sum, item) => {
       const product = products.find((entry) => String(entry.id) === item.product_id);
@@ -360,10 +400,13 @@ export function InvoiceForm({
     }
   }, [watchedItems, products]);
 
-  // Add product from the single dropdown
   const handleAddProduct = () => {
     if (!selectedProductId) {
       toast.error("Please select a product first.");
+      return;
+    }
+    if (!selectedWarehouseId) {
+      toast.error("Please select a warehouse.");
       return;
     }
     const quantity = selectedProductQuantity;
@@ -379,10 +422,12 @@ export function InvoiceForm({
     }
     append({
       product_id: selectedProductId,
+      warehouse_id: selectedWarehouseId,
       quantity: quantity,
     });
     // Reset selection
     setSelectedProductId("");
+    setSelectedWarehouseId("");
     setSelectedProductQuantity("1");
   };
 
@@ -412,6 +457,7 @@ export function InvoiceForm({
         creation_mode: values.creation_mode,
         items: values.items.map((item) => ({
           product_id: Number(item.product_id),
+          warehouse_id: Number(item.warehouse_id),
           quantity: item.quantity,
         })),
       };
@@ -419,6 +465,7 @@ export function InvoiceForm({
       if (isEditMode && initialInvoice) {
         const updated = await updateMutation.mutateAsync(payload);
         toast.success("Invoice updated successfully");
+        setIsRedirecting(true);
         onUpdated?.(updated);
         return;
       }
@@ -433,10 +480,12 @@ export function InvoiceForm({
 
       if (mode === "save_and_view") {
         toast.info("Opening printable invoice view.");
+        setIsRedirecting(true);
         onCreatedAndView?.(created);
         return;
       }
 
+      setIsRedirecting(true);
       onCreated?.(created);
     } catch (error) {
       const message = getApiError(error);
@@ -467,7 +516,7 @@ export function InvoiceForm({
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Invoice Info Card - unchanged except SelectTrigger height */}
+      {/* Invoice Info Card */}
       <Card>
         <CardHeader>
           <CardTitle>Invoice Info</CardTitle>
@@ -523,7 +572,7 @@ export function InvoiceForm({
         </CardContent>
       </Card>
 
-      {/* Party Details Card - unchanged */}
+      {/* Party Details Card */}
       <Card>
         <CardHeader>
           <CardTitle>Party Details</CardTitle>
@@ -571,7 +620,7 @@ export function InvoiceForm({
         </CardContent>
       </Card>
 
-      {/* Bill Mapping Card - unchanged */}
+      {/* Bill Mapping Card */}
       <Card>
         <CardHeader>
           <CardTitle>Bill Mapping</CardTitle>
@@ -636,7 +685,7 @@ export function InvoiceForm({
         </CardContent>
       </Card>
 
-      {/* PRODUCTS SECTION - REDESIGNED */}
+      {/* PRODUCTS SECTION - with warehouse */}
       <Card>
         <CardHeader>
           <CardTitle>Products</CardTitle>
@@ -644,7 +693,7 @@ export function InvoiceForm({
         <CardContent className="space-y-4">
           {/* Single product selection row */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
-            <div className="sm:col-span-7">
+            <div className="sm:col-span-5">
               <Label className="text-sm font-semibold text-gray-700">Select Product</Label>
               <Combobox
                 options={productOptions}
@@ -652,6 +701,16 @@ export function InvoiceForm({
                 placeholder="Search and select product..."
                 searchPlaceholder="Type product name, code or category..."
                 onChange={setSelectedProductId}
+              />
+            </div>
+            <div className="sm:col-span-3">
+              <Label className="text-sm font-semibold text-gray-700">Warehouse</Label>
+              <Combobox
+                options={warehouseOptions}
+                value={selectedWarehouseId}
+                placeholder="Select warehouse..."
+                searchPlaceholder="Search warehouse..."
+                onChange={setSelectedWarehouseId}
               />
             </div>
             <div className="sm:col-span-3">
@@ -665,7 +724,7 @@ export function InvoiceForm({
                 className="h-9 text-sm"
               />
             </div>
-            <div className="sm:col-span-2 flex items-end">
+            <div className="sm:col-span-1 flex items-end">
               <Button
                 type="button"
                 onClick={handleAddProduct}
@@ -680,16 +739,17 @@ export function InvoiceForm({
           {/* Product list (compact rows) */}
           {fields.length === 0 ? (
             <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 py-8 text-center text-sm text-gray-500">
-              No products added. Select a product above and click "Add".
+              No products added. Select a product, warehouse and click "Add".
             </div>
           ) : (
             <div className="mt-4 rounded-xl border border-gray-200 bg-white p-3">
-              {/* Header - hidden on mobile, visible on sm+ */}
+              {/* Header row with Warehouse column */}
               <div className="hidden grid-cols-12 gap-2 border-b border-gray-200 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 sm:grid">
-                <div className="col-span-4">Product</div>
+                <div className="col-span-3">Product</div>
+                <div className="col-span-2">Warehouse</div>
                 <div className="col-span-2">Quantity</div>
                 <div className="col-span-2">Unit Price</div>
-                <div className="col-span-3">Tax / Total</div>
+                <div className="col-span-2">Tax / Total</div>
                 <div className="col-span-1"></div>
               </div>
               {fields.map((field, index) => (
@@ -700,6 +760,7 @@ export function InvoiceForm({
                   form={form}
                   remove={remove}
                   products={products}
+                  warehouses={warehouses}
                 />
               ))}
             </div>
@@ -711,7 +772,7 @@ export function InvoiceForm({
         </CardContent>
       </Card>
 
-      {/* Discount & Preview Card - unchanged */}
+      {/* Discount & Preview Card */}
       <Card>
         <CardHeader>
           <CardTitle>Discount & Preview</CardTitle>
@@ -739,7 +800,7 @@ export function InvoiceForm({
         </CardContent>
       </Card>
 
-      {/* Footer Card - unchanged */}
+      {/* Footer Card */}
       <Card>
         <CardHeader>
           <CardTitle>Footer</CardTitle>
@@ -759,13 +820,24 @@ export function InvoiceForm({
       {/* Actions bar */}
       <div className="sticky bottom-3 z-10 rounded-2xl border border-gray-200 bg-white/90 p-3 shadow-lg backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-          <Button type="button" className="h-9 w-full sm:w-auto gap-1.5 text-sm" onClick={() => void submitForm("save")} disabled={isPending}>
-            {isPending ? "Saving..." : isEditMode ? "Save Changes" : "Save Invoice"}
+          <Button 
+            type="button" 
+            className="h-9 w-full sm:w-auto gap-1.5 text-sm" 
+            onClick={() => void submitForm("save")} 
+            disabled={isPending || isRedirecting}
+          >
+            {isPending || isRedirecting ? "Saving..." : isEditMode ? "Save Changes" : "Save Invoice"}
           </Button>
           {!isEditMode && (
-            <Button type="button" variant="outline" className="h-9 w-full sm:w-auto gap-1.5 text-sm" onClick={() => void submitForm("save_and_view")} disabled={isPending}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="h-9 w-full sm:w-auto gap-1.5 text-sm" 
+              onClick={() => void submitForm("save_and_view")} 
+              disabled={isPending || isRedirecting}
+            >
               <Printer className="h-3.5 w-3.5" />
-              {isPending ? "Saving..." : "Save & View"}
+              {isPending || isRedirecting ? "Saving..." : "Save & View"}
             </Button>
           )}
         </div>

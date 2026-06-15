@@ -143,22 +143,24 @@ class ResendOTPView(generics.GenericAPIView):
         )
         return Response({"detail": "OTP sent."}, status=status.HTTP_200_OK)
 
+
 class UserListView(generics.ListCreateAPIView):
     permission_classes = [IsAdmin]
-    queryset = User.objects.all().order_by("full_name", "username")
     pagination_class = None
+
+    def get_queryset(self):
+        # Exclude superusers (is_superuser=True) because they are not part of the portal
+        # and have no role. This prevents regular admins from seeing/deactivating them.
+        queryset = User.objects.filter(is_superuser=False).order_by("full_name", "username")
+        role = self.request.query_params.get("role")
+        if role:
+            queryset = queryset.filter(role=role)
+        return queryset
 
     def get_serializer_class(self):
         if self.request.method == "POST":
             return UserCreateSerializer
         return UserAdminSerializer
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        role = self.request.query_params.get("role")
-        if role:
-            queryset = queryset.filter(role=role)
-        return queryset
 
     def perform_create(self, serializer):
         user = serializer.save()
@@ -173,7 +175,7 @@ class UserListView(generics.ListCreateAPIView):
 
 class UserRetrieveUpdateView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAdmin]
-    queryset = User.objects.all()
+    queryset = User.objects.filter(is_superuser=False)  # Exclude superusers from detail as well
 
     def get_serializer_class(self):
         if self.request.method in ["PATCH", "PUT"]:
@@ -195,7 +197,7 @@ class UserSetPasswordView(views.APIView):
     permission_classes = [IsAdmin]
 
     def post(self, request, pk, *args, **kwargs):
-        user = generics.get_object_or_404(User, pk=pk)
+        user = generics.get_object_or_404(User, pk=pk, is_superuser=False)
         serializer = UserSetPasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -217,7 +219,7 @@ class UserActivateView(views.APIView):
     permission_classes = [IsAdmin]
 
     def post(self, request, pk, *args, **kwargs):
-        user = generics.get_object_or_404(User, pk=pk)
+        user = generics.get_object_or_404(User, pk=pk, is_superuser=False)
         user.is_active = True
         user.save(update_fields=["is_active"])
 
@@ -236,7 +238,7 @@ class UserDeactivateView(views.APIView):
     permission_classes = [IsAdmin]
 
     def post(self, request, pk, *args, **kwargs):
-        user = generics.get_object_or_404(User, pk=pk)
+        user = generics.get_object_or_404(User, pk=pk, is_superuser=False)
         user.is_active = False
         user.save(update_fields=["is_active"])
 

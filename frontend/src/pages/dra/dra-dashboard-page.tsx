@@ -49,12 +49,12 @@ export default function DRADashboardPage() {
     setPage(1);
   }, []);
 
-  const overdueCellClass = (days: number) => {
+  const overdueCellClass = useCallback((days: number) => {
     const s = overdueSeverity(days);
     return s === "high" ? "text-[#E04E6A]" : s === "medium" ? "text-[#D97B0A]" : "text-[#1E1E30]";
-  };
+  }, []);
 
-  const columns: DataTableColumn<Invoice>[] = [
+  const columns = useMemo<DataTableColumn<Invoice>[]>(() => [
     {
       key: "invoice_number",
       header: "Invoice No.",
@@ -103,8 +103,10 @@ export default function DRADashboardPage() {
         </Button>
       ),
     },
-  ];
+  ], [openPayment, overdueCellClass]);
 
+
+  
   return (
     <AppShell >
       <div className="space-y-5">

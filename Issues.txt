@@ -1,11 +1,7 @@
 
 
 
-========> Next and previous buttons not visible in mobile , tablet screen for bills table
 
---> at the time of creating invoice warehouse is automatically selected and product is deducted 
-
---> under payments menu we can add tabs for UPI / CASH , CHQ , ELCT 	
 ----------------------------------- LOW PRIORITY ------------------------------------------------------
 
 Dash board and invoices table should be two different pages 

@@ -75,7 +75,7 @@ class PrintableInvoice(models.Model):
         CANCELLED = "cancelled", "Cancelled"
 
     invoice_number = models.CharField(max_length=100, unique=True)
-    invoice_date = models.DateField()
+    invoice_date = models.DateField(db_index=True)  # ← index added here
 
     party = models.ForeignKey(
         "reports.Party",
@@ -126,7 +126,22 @@ class PrintableInvoice(models.Model):
 
 class PrintableInvoiceItem(models.Model):
     invoice = models.ForeignKey(PrintableInvoice, on_delete=models.CASCADE, related_name="items")
-    product = models.ForeignKey("products.Product", null=True, blank=True, on_delete=models.SET_NULL, related_name="invoice_items")
+    # ❌ No extra invoice_date field here
+    product = models.ForeignKey(
+        "products.Product",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="invoice_items",
+    )
+    warehouse = models.ForeignKey(
+        "products.Warehouse",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="invoice_items",
+        help_text="Warehouse from which stock was deducted for this invoice line item.",
+    )
     description = models.CharField(max_length=255)
     quantity = models.DecimalField(max_digits=12, decimal_places=2, default=1)
     rate = models.DecimalField(max_digits=12, decimal_places=2, default=0)

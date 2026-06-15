@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 import io
 import logging
 
 from datetime import timedelta
 
 import pandas as pd
-from django.db.models import DecimalField, Sum, Value
+from django.db.models import Q, DecimalField, Sum, Value
 from django.db.models.functions import Coalesce, TruncDate
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -150,23 +151,42 @@ class TodayTotalsView(views.APIView):
         return Response(serializer.data)
 
     def _compute_totals(self, start_date, end_date):
-        base = Payment.objects.filter(created_at__date__gte=start_date, created_at__date__lte=end_date)
+        base = Payment.objects.filter(
+            created_at__date__gte=start_date, created_at__date__lte=end_date
+        )
         amount_field = DecimalField(max_digits=12, decimal_places=2)
 
-        def total_for(method, cleared_only=False):
-            queryset = base.filter(payment_method=method)
-            if cleared_only:
-                queryset = queryset.filter(cheque_status=Payment.ChequeStatus.CLEARED)
-            return queryset.aggregate(
-                total=Coalesce(Sum("amount"), Value(0), output_field=amount_field)
-            )["total"]
-
-        return {
-            "cash_total": total_for(Payment.PaymentMethod.CASH),
-            "upi_total": total_for(Payment.PaymentMethod.UPI),
-            "cheque_total": total_for(Payment.PaymentMethod.CHEQUE, cleared_only=True),
-            "electronic_total": total_for(Payment.PaymentMethod.ELECTRONIC, cleared_only=True),
-        }
+        totals = base.aggregate(
+            cash_total=Coalesce(
+                Sum("amount", filter=Q(payment_method=Payment.PaymentMethod.CASH)),
+                Value(Decimal("0.00"), output_field=amount_field),
+            ),
+            upi_total=Coalesce(
+                Sum("amount", filter=Q(payment_method=Payment.PaymentMethod.UPI)),
+                Value(Decimal("0.00"), output_field=amount_field),
+            ),
+            cheque_total=Coalesce(
+                Sum(
+                    "amount",
+                    filter=Q(
+                        payment_method=Payment.PaymentMethod.CHEQUE,
+                        cheque_status=Payment.ChequeStatus.CLEARED,
+                    ),
+                ),
+                Value(Decimal("0.00"), output_field=amount_field),
+            ),
+            electronic_total=Coalesce(
+                Sum(
+                    "amount",
+                    filter=Q(
+                        payment_method=Payment.PaymentMethod.ELECTRONIC,
+                        cheque_status=Payment.ChequeStatus.CLEARED,
+                    ),
+                ),
+                Value(Decimal("0.00"), output_field=amount_field),
+            ),
+        )
+        return totals
 
 
 class DailySummaryView(views.APIView):

@@ -6,7 +6,7 @@ import logging
 from decimal import Decimal
 from html import escape
 
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, views
 from rest_framework.response import Response
@@ -38,6 +38,7 @@ def _fmt_date(value) -> str:
     if not value:
         return ""
     return value.strftime("%d/%m/%Y")
+
 
 def build_invoice_html(invoice):
     from html import escape
@@ -364,6 +365,7 @@ class InvoiceSequenceSettingView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         return InvoiceSequenceSetting.get_active()
 
+
 class PrintableInvoiceListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAdmin]
     queryset = PrintableInvoice.objects.all().select_related("recovery_bill", "party").prefetch_related("items__product")
@@ -374,6 +376,16 @@ class PrintableInvoiceListCreateView(generics.ListCreateAPIView):
         if self.request.method == "POST":
             return PrintableInvoiceCreateSerializer
         return PrintableInvoiceListSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        start_date = self.request.query_params.get("start_date")
+        end_date = self.request.query_params.get("end_date")
+        if start_date:
+            queryset = queryset.filter(invoice_date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(invoice_date__lte=end_date)
+        return queryset
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -405,6 +417,13 @@ class PrintableInvoiceRetrieveView(generics.RetrieveUpdateDestroyAPIView):
         if self.request.method in ["PATCH", "PUT"]:
             return PrintableInvoiceUpdateSerializer
         return PrintableInvoiceDetailSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except Http404:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class PrintableInvoicePrintView(views.APIView):
     permission_classes = [IsAdmin]

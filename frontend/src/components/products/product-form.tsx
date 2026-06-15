@@ -8,7 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getApiError } from "@/lib/utils";
 import { useCreateProduct, useProductCategories, useUpdateProduct } from "@/hooks/useProducts";
 import type { Product } from "@/types";
@@ -35,9 +41,8 @@ export function ProductForm({
 }) {
   const createMutation = useCreateProduct();
   const updateMutation = useUpdateProduct();
+  // console.log removed — was leaking category data to the browser console in production
   const { data: categories = [] } = useProductCategories();
-
-  console.log("Categories for product form:", categories);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
@@ -55,7 +60,6 @@ export function ProductForm({
 
   useEffect(() => {
     if (!product) return;
-
     form.reset({
       product_code: product.product_code || "",
       category: product.category || "",
@@ -87,88 +91,108 @@ export function ProductForm({
       const saved = product
         ? await updateMutation.mutateAsync({ id: product.id, payload })
         : await createMutation.mutateAsync(payload);
-
       toast.success(product ? "Product updated" : "Product created");
       onSuccess?.(saved);
     } catch (error) {
-      const message = getApiError(error);
-      toast.error(message);
+      toast.error(getApiError(error));
     }
   }
 
-  const categoryOptions = categories.map((category) => ({
-    value: String(category.id),
-    label: category.name,
+  const categoryOptions = categories.map((cat) => ({
+    value: String(cat.id),
+    label: cat.name,
   }));
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <form className="grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={form.handleSubmit(onSubmit)}>
-      <div className="space-y-2">
+    <form
+      className="grid grid-cols-1 gap-4 md:grid-cols-2"
+      onSubmit={form.handleSubmit(onSubmit)}
+    >
+      <div className="space-y-1.5">
         <Label htmlFor="product_code">Product Code</Label>
-        <Input id="product_code" placeholder="Leave blank to auto-generate" {...form.register("product_code")} />
-        {form.formState.errors.product_code ? (
-          <p className="text-sm text-red-500">{form.formState.errors.product_code.message}</p>
-        ) : null}
+        <Input
+          id="product_code"
+          placeholder="Leave blank to auto-generate"
+          {...form.register("product_code")}
+        />
+        {form.formState.errors.product_code && (
+          <p className="text-[11px] text-red-500">
+            {form.formState.errors.product_code.message}
+          </p>
+        )}
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <Label>Category</Label>
         <Combobox
           options={categoryOptions}
           value={selectedCategoryId}
           placeholder="Select category"
-          searchPlaceholder="Search categories..."
+          searchPlaceholder="Search categories…"
           onChange={(value) => {
-            const selected = categories.find((category) => String(category.id) === value);
-            form.setValue("category_id", value, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+            const selected = categories.find((c) => String(c.id) === value);
+            form.setValue("category_id", value, {
+              shouldDirty: true,
+              shouldTouch: true,
+              shouldValidate: true,
+            });
             form.setValue("category", selected?.name ?? "", { shouldDirty: true });
           }}
         />
-        {form.formState.errors.category_id ? (
-          <p className="text-sm text-red-500">{form.formState.errors.category_id.message}</p>
-        ) : null}
+        {form.formState.errors.category_id && (
+          <p className="text-[11px] text-red-500">
+            {form.formState.errors.category_id.message}
+          </p>
+        )}
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <Label htmlFor="name">Name</Label>
         <Input id="name" {...form.register("name")} />
-        {form.formState.errors.name ? (
-          <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>
-        ) : null}
+        {form.formState.errors.name && (
+          <p className="text-[11px] text-red-500">{form.formState.errors.name.message}</p>
+        )}
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <Label htmlFor="price">Price</Label>
         <Input id="price" type="number" step="0.01" {...form.register("price")} />
-        {form.formState.errors.price ? (
-          <p className="text-sm text-red-500">{form.formState.errors.price.message}</p>
-        ) : null}
+        {form.formState.errors.price && (
+          <p className="text-[11px] text-red-500">{form.formState.errors.price.message}</p>
+        )}
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <Label htmlFor="default_quantity">Default Quantity</Label>
-        <Input id="default_quantity" type="number" step="0.01" {...form.register("default_quantity")} />
-        {form.formState.errors.default_quantity ? (
-          <p className="text-sm text-red-500">{form.formState.errors.default_quantity.message}</p>
-        ) : null}
+        <Input
+          id="default_quantity"
+          type="number"
+          step="0.01"
+          {...form.register("default_quantity")}
+        />
+        {form.formState.errors.default_quantity && (
+          <p className="text-[11px] text-red-500">
+            {form.formState.errors.default_quantity.message}
+          </p>
+        )}
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <Label htmlFor="tax_rate">Tax Rate</Label>
         <Input id="tax_rate" type="number" step="0.01" {...form.register("tax_rate")} />
-        {form.formState.errors.tax_rate ? (
-          <p className="text-sm text-red-500">{form.formState.errors.tax_rate.message}</p>
-        ) : null}
+        {form.formState.errors.tax_rate && (
+          <p className="text-[11px] text-red-500">{form.formState.errors.tax_rate.message}</p>
+        )}
       </div>
 
-      <div className="space-y-2 md:col-span-2">
+      <div className="space-y-1.5 md:col-span-2">
         <Label>Active Status</Label>
         <Select
           value={activeValue}
-          onValueChange={(value) =>
-            form.setValue("is_active", value as "true" | "false", {
+          onValueChange={(v) =>
+            form.setValue("is_active", v as "true" | "false", {
               shouldDirty: true,
               shouldTouch: true,
               shouldValidate: true,
@@ -187,7 +211,7 @@ export function ProductForm({
 
       <div className="flex justify-end md:col-span-2">
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Saving..." : product ? "Save Changes" : "Create Product"}
+          {isSubmitting ? "Saving…" : product ? "Save Changes" : "Create Product"}
         </Button>
       </div>
     </form>

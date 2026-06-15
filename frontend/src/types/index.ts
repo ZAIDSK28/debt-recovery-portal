@@ -16,8 +16,6 @@ export interface User {
   full_name: string;
   email: string;
   role: UserRole;
-  // BUG FIX: is_active is now included in UserSerializer (login response),
-  // matching UserAdminSerializer. No longer needs to be optional.
   is_active: boolean;
   is_admin: boolean;
 }
@@ -48,8 +46,6 @@ export interface Product {
   created_at: string;
 }
 
-// Matches backend ProductCategorySerializer exactly:
-// fields = [id, name, description, is_active, created_at]
 export interface ProductCategory {
   id: number;
   name: string;
@@ -58,8 +54,6 @@ export interface ProductCategory {
   created_at: string;
 }
 
-// Matches backend WarehouseSerializer exactly:
-// fields = [id, name, location, is_active, created_at]
 export interface Warehouse {
   id: number;
   name: string;
@@ -88,7 +82,6 @@ export interface StockMovement {
   product_name: string;
   warehouse: number;
   warehouse_name: string;
-  // BUG FIX: "adjustment" was missing from this union
   movement_type: StockMovementType;
   quantity: string;
   note: string;
@@ -232,13 +225,17 @@ export interface ImportBillsStatus {
   percentage: number;
 }
 
+// ─── Invoice types with warehouse support ────────────────────────────────────
+
 export interface CreateInvoiceReportPayloadItem {
   product_id: number;
+  warehouse_id: number;
   quantity: string;
 }
 
 export interface InvoiceReportRequestItem {
   product_id: number;
+  warehouse_id: number;
   quantity: string;
 }
 
@@ -248,6 +245,8 @@ export interface InvoiceReportResponseItem {
   product_code: string | null;
   product_name: string | null;
   category: string | null;
+  warehouse_id: number | null;
+  warehouse_name: string | null;
   description: string;
   quantity: string;
   rate: string;
@@ -263,6 +262,8 @@ export interface InvoiceReportPayload {
     product_code: string;
     product_name: string;
     category: string;
+    warehouse_id: number;
+    warehouse_name: string;
     description: string;
     quantity: string;
     rate: string;

@@ -1,6 +1,8 @@
+// src/components/ui/empty-state.tsx
+import { memo } from "react";
 import type { ReactNode } from "react";
 
-export function EmptyState({
+export const EmptyState = memo(function EmptyState({
   icon,
   title,
   description,
@@ -23,4 +25,4 @@ export function EmptyState({
       {action ? <div className="mt-5">{action}</div> : null}
     </div>
   );
-}
+});

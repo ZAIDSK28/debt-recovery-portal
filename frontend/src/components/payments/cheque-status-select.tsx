@@ -1,4 +1,5 @@
 // src/components/payments/cheque-status-select.tsx
+import { memo } from "react";
 import { toast } from "@/lib/toast";
 import {
   Select,
@@ -23,7 +24,7 @@ const STATUS_STYLES: Record<UpdatableChequeStatus, string> = {
   bounced:  "text-[#E04E6A]",
 };
 
-export function ChequeStatusSelect({
+export const ChequeStatusSelect = memo(function ChequeStatusSelect({
   paymentId,
   value,
 }: {
@@ -60,4 +61,4 @@ export function ChequeStatusSelect({
       </SelectContent>
     </Select>
   );
-}
+});

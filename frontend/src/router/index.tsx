@@ -7,8 +7,6 @@ const LoginPage = lazy(() => import("@/pages/auth/login-page"));
 const VerifyOtpPage = lazy(() => import("@/pages/auth/verify-otp-page"));
 const AdminDashboardPage = lazy(() => import("@/pages/admin/admin-dashboard-page"));
 const AdminPaymentsPage = lazy(() => import("@/pages/admin/admin-payments-page"));
-const AdminChequesPage = lazy(() => import("@/pages/admin/admin-cheques-page"));
-const AdminElectronicPage = lazy(() => import("@/pages/admin/admin-electronic-page"));
 const AdminUsersPage = lazy(() => import("@/pages/admin/admin-users-page"));
 const AdminUserCreatePage = lazy(() => import("@/pages/admin/admin-user-create-page"));
 const AdminUserEditPage = lazy(() => import("@/pages/admin/admin-user-edit-page"));
@@ -21,6 +19,7 @@ const ProductsListPage = lazy(() => import("@/pages/products/products-list-page"
 const ProductCreatePage = lazy(() => import("@/pages/products/product-create-page"));
 const ProductEditPage = lazy(() => import("@/pages/products/product-edit-page"));
 const StockManagementPage = lazy(() => import("@/pages/stock/stock-management-page"));
+const AuditLogsPage = lazy(() => import("@/pages/admin/admin-audit-logs-page"));
 const ErrorPage = lazy(() => import("@/pages/error-page"));
 
 export const router = createBrowserRouter([
@@ -49,14 +48,6 @@ export const router = createBrowserRouter([
       {
         path: "/admin/payments",
         element: <AdminPaymentsPage />,
-      },
-      {
-        path: "/admin/cheques",
-        element: <AdminChequesPage />,
-      },
-      {
-        path: "/admin/electronic",
-        element: <AdminElectronicPage />,
       },
       {
         path: "/admin/users",
@@ -101,6 +92,10 @@ export const router = createBrowserRouter([
       {
         path: "/invoices/:id",
         element: <InvoiceDetailPage />,
+      },
+      {
+      path: "/admin/audit-logs",
+      element: <AuditLogsPage />,
       },
     ],
   },

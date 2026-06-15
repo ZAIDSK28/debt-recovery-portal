@@ -1,5 +1,5 @@
 // src/components/common/data-table.tsx
-import type { ReactNode } from "react";
+import React, { memo, useCallback, useMemo, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -75,7 +75,6 @@ export interface DataTableProps<T> {
   isFetching?: boolean;
   onPageChange: (page: number) => void;
   onSortChange: (ordering: string | undefined) => void;
-  /** Rendered inside the card above the table. Search, filters, date pickers, etc. */
   filters?: ReactNode;
   emptyState?: ReactNode;
   className?: string;
@@ -83,7 +82,19 @@ export interface DataTableProps<T> {
   rowKey?: (row: T) => string | number;
 }
 
-export function DataTable<T extends object>({
+function DefaultEmptyState() {
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[#EAEBF8]">
+        <ChevronsUpDown className="h-4 w-4 text-[#9898B4]" />
+      </div>
+      <p className="text-[13px] font-medium text-[#1E1E30]">No records found</p>
+      <p className="text-[11px] text-[#9898B4]">Try adjusting your filters or search term.</p>
+    </div>
+  );
+}
+
+export const DataTable = memo(<T extends object>({
   columns,
   data,
   total,
@@ -99,16 +110,16 @@ export function DataTable<T extends object>({
   className,
   minWidth = 700,
   rowKey,
-}: DataTableProps<T>) {
-  const parsed = parseOrdering(ordering);
+}: DataTableProps<T>) => {
+  const parsed = useMemo(() => parseOrdering(ordering), [ordering]);
 
-  function handleHeaderClick(col: DataTableColumn<T>) {
+  const handleHeaderClick = useCallback((col: DataTableColumn<T>) => {
     if (!col.sortKey) return;
     const currentDir = parsed?.key === col.sortKey ? parsed.dir : null;
     const next = nextDir(currentDir);
     if (next === null) { onSortChange(undefined); } else { onSortChange(buildOrdering(col.sortKey, next)); }
     onPageChange(1);
-  }
+  }, [parsed, onSortChange, onPageChange]);
 
   const showEmpty    = !isLoading && data.length === 0;
   const showSkeleton = isLoading;
@@ -122,12 +133,10 @@ export function DataTable<T extends object>({
         className,
       )}
     >
-      {/* Filter bar */}
       {filters ? (
         <div className="border-b border-[#DFE1F0] bg-[#FAFBFE] px-3 py-2.5">{filters}</div>
       ) : null}
 
-      {/* Background refetch indicator */}
       {isFetching && !isLoading ? (
         <div className="flex items-center gap-1.5 border-b border-[#DFE1F0] bg-[#F6F7FC] px-3 py-1">
           <Loader2 className="h-2.5 w-2.5 animate-spin text-[#6F72BE]" />
@@ -135,12 +144,10 @@ export function DataTable<T extends object>({
         </div>
       ) : null}
 
-      {/* Empty state */}
       {showEmpty ? (
         <div className="py-14 text-center">{emptyState ?? <DefaultEmptyState />}</div>
       ) : null}
 
-      {/* Table */}
       {(showSkeleton || showData) ? (
         <div className="w-full overflow-x-auto">
           <table className="w-full border-collapse" style={{ minWidth }}>
@@ -204,7 +211,6 @@ export function DataTable<T extends object>({
         </div>
       ) : null}
 
-      {/* Pagination */}
       {showData ? (
         <DataTablePagination
           page={page}
@@ -215,16 +221,4 @@ export function DataTable<T extends object>({
       ) : null}
     </div>
   );
-}
-
-function DefaultEmptyState() {
-  return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[#EAEBF8]">
-        <ChevronsUpDown className="h-4 w-4 text-[#9898B4]" />
-      </div>
-      <p className="text-[13px] font-medium text-[#1E1E30]">No records found</p>
-      <p className="text-[11px] text-[#9898B4]">Try adjusting your filters or search term.</p>
-    </div>
-  );
-}
+}) as <T extends object>(props: DataTableProps<T>) => React.ReactElement;

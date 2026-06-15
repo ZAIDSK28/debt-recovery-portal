@@ -1,6 +1,6 @@
 // src/components/payments/payments-table.tsx
 import type { ReactNode } from "react";
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { Wallet } from "lucide-react";
 import { DataTable, type DataTableColumn } from "@/components/common/data-table";
 import { ChequeStatusBadge } from "@/components/common/status-badge";
@@ -48,52 +48,53 @@ export const PaymentsTable = memo(function PaymentsTable({
   emptyTitle = "No payments found",
   emptyDescription = "Payment records will appear here when available.",
 }: PaymentsTableProps) {
-  const columns: DataTableColumn<Payment>[] = [
-    {
-      key: "id",
-      header: "ID",
-      sortKey: "id",
-      render: (r) => <span className="tabular-nums text-[#9898B4]">#{r.id}</span>,
-    },
-    {
-      key: "bill_invoice_number",
-      header: "Invoice",
-      sortKey: "bill__invoice_number",
-      render: (r) => (
-        <span className="font-mono text-[11.5px] font-semibold text-[#6F72BE]">
-          {r.bill_invoice_number}
-        </span>
-      ),
-    },
-    {
-      key: "dra_username",
-      header: "DRA",
-      sortKey: "dra__username",
-      render: (r) => <span className="text-[#1E1E30]">{r.dra_username}</span>,
-    },
-    {
-      key: "payment_method",
-      header: "Method",
-      render: (r) => (
-        <span className="capitalize text-[#6B6B8A]">{r.payment_method}</span>
-      ),
-    },
-    {
-      key: "amount",
-      header: "Amount",
-      sortKey: "amount",
-      render: (r) => (
-        <span className="font-semibold tabular-nums">{formatCurrency(r.amount)}</span>
-      ),
-    },
+  const columns = useMemo<DataTableColumn<Payment>[]>(() => {
+    const baseColumns: DataTableColumn<Payment>[] = [
+      {
+        key: "id",
+        header: "ID",
+        sortKey: "id",
+        render: (r) => <span className="tabular-nums text-[#9898B4]">#{r.id}</span>,
+      },
+      {
+        key: "bill_invoice_number",
+        header: "Invoice",
+        sortKey: "bill__invoice_number",
+        render: (r) => (
+          <span className="font-mono text-[11.5px] font-semibold text-[#6F72BE]">
+            {r.bill_invoice_number}
+          </span>
+        ),
+      },
+      {
+        key: "dra_username",
+        header: "DRA",
+        sortKey: "dra__username",
+        render: (r) => <span className="text-[#1E1E30]">{r.dra_username}</span>,
+      },
+      {
+        key: "payment_method",
+        header: "Method",
+        render: (r) => (
+          <span className="capitalize text-[#6B6B8A]">{r.payment_method}</span>
+        ),
+      },
+      {
+        key: "amount",
+        header: "Amount",
+        sortKey: "amount",
+        render: (r) => (
+          <span className="font-semibold tabular-nums">{formatCurrency(r.amount)}</span>
+        ),
+      },
+    ];
 
-    // Cheque-specific columns
-    ...(showChequeColumns
-      ? ([
+    const chequeSpecificColumns: DataTableColumn<Payment>[] = showChequeColumns
+      ? [
           {
             key: "transaction_number",
             header: "Txn No.",
-            render: (r: Payment) => (
+            render: (r) => (
               <span className="font-mono text-[11px] text-[#6B6B8A]">
                 {r.transaction_number || "—"}
               </span>
@@ -102,12 +103,12 @@ export const PaymentsTable = memo(function PaymentsTable({
           {
             key: "cheque_number",
             header: "Cheque No.",
-            render: (r: Payment) => r.cheque_number || "—",
+            render: (r) => r.cheque_number || "—",
           },
           {
             key: "cheque_date",
             header: "Cheque Date",
-            render: (r: Payment) =>
+            render: (r) =>
               r.cheque_date ? (
                 <span className="text-[#9898B4]">{formatDate(r.cheque_date)}</span>
               ) : (
@@ -117,7 +118,7 @@ export const PaymentsTable = memo(function PaymentsTable({
           {
             key: "cheque_type",
             header: "Type",
-            render: (r: Payment) =>
+            render: (r) =>
               r.cheque_type ? (
                 <span className="font-mono uppercase text-[11px]">{r.cheque_type}</span>
               ) : (
@@ -127,33 +128,32 @@ export const PaymentsTable = memo(function PaymentsTable({
           {
             key: "firm",
             header: "Firm",
-            render: (r: Payment) =>
+            render: (r) =>
               isChequeLikePayment(r) ? (
                 <span className="text-[#6B6B8A]">{r.firm || "—"}</span>
               ) : (
                 "—"
               ),
           },
-        ] as DataTableColumn<Payment>[])
-      : ([
+        ]
+      : [
           {
             key: "transaction_number",
             header: "Reference",
-            render: (r: Payment) => (
+            render: (r) => (
               <span className="font-mono text-[11px] text-[#6B6B8A]">
                 {r.transaction_number || "—"}
               </span>
             ),
           },
-        ] as DataTableColumn<Payment>[])),
+        ];
 
-    // Status column
-    ...(showStatusColumn
-      ? ([
+    const statusColumns: DataTableColumn<Payment>[] = showStatusColumn
+      ? [
           {
             key: "cheque_status",
             header: "Status",
-            render: (r: Payment) =>
+            render: (r) =>
               isChequeLikePayment(r) ? (
                 editableStatus ? (
                   <ChequeStatusSelect paymentId={r.id} value={r.cheque_status} />
@@ -164,18 +164,20 @@ export const PaymentsTable = memo(function PaymentsTable({
                 "—"
               ),
           },
-        ] as DataTableColumn<Payment>[])
-      : []),
+        ]
+      : [];
 
-    {
+    const createdColumn: DataTableColumn<Payment> = {
       key: "created_at",
       header: "Created",
       sortKey: "created_at",
       render: (r) => (
         <span className="text-[12px] text-[#9898B4]">{formatDate(r.created_at)}</span>
       ),
-    },
-  ];
+    };
+
+    return [...baseColumns, ...chequeSpecificColumns, ...statusColumns, createdColumn];
+  }, [showChequeColumns, showStatusColumn, editableStatus]);
 
   return (
     <DataTable

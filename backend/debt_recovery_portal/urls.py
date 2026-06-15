@@ -20,5 +20,6 @@ urlpatterns = [
     path("api/dashboard/", include("dashboard.urls")),
     path("api/routes/", RouteListView.as_view(), name="routes-list-root"),
     path("api/outlets/", OutletListView.as_view(), name="outlets-list-root"),
+    path("api/core/", include("core.urls")),
     path("api/my-assignments-flat/", MyAssignmentsFlatView.as_view(), name="my-assignments-flat-root"),
 ]

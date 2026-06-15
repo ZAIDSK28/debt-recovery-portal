@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+// src/components/bills/assign-agent-select.tsx
+import { memo, useEffect, useState } from "react";
 import { toast } from "@/lib/toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAssignBill } from "@/hooks/useBills";
 import { getApiError } from "@/lib/utils";
 import type { User } from "@/types";
 
-export function AssignAgentSelect({
+export const AssignAgentSelect = memo(function AssignAgentSelect({
   billId,
   users,
   currentAssignedToId,
@@ -52,4 +53,4 @@ export function AssignAgentSelect({
       </SelectContent>
     </Select>
   );
-}
+});

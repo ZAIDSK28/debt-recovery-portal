@@ -1,37 +1,47 @@
 // src/components/common/data-table-pagination.tsx
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function DataTablePagination({
-  page,
-  pageSize,
-  total,
-  onPageChange,
-}: {
+interface DataTablePaginationProps {
   page: number;
   pageSize: number;
   total: number;
   onPageChange: (page: number) => void;
-}) {
+}
+
+export const DataTablePagination = memo(function DataTablePagination({
+  page,
+  pageSize,
+  total,
+  onPageChange,
+}: DataTablePaginationProps) {
   const { totalPages, canGoPrevious, canGoNext } = useMemo(() => {
     const tp = Math.max(1, Math.ceil(total / pageSize));
     return { totalPages: tp, canGoPrevious: page > 1, canGoNext: page < tp };
   }, [page, pageSize, total]);
 
   return (
-    <div className="flex items-center justify-between border-t border-[#DFE1F0] px-3 py-2">
-      <p className="text-[11px] text-[#9898B4]">
+    <div
+      className={[
+        "border-t border-[#DFE1F0] px-3 py-2.5",
+        "flex flex-col items-center gap-2",
+        "sm:flex-row sm:justify-between sm:gap-0",
+      ].join(" ")}
+    >
+      <p className="whitespace-nowrap text-[11px] text-[#9898B4]">
         Page {page} of {totalPages}
         <span className="mx-1.5 text-[#DFE1F0]">·</span>
         <span className="text-[#6B6B8A]">{total} records</span>
       </p>
+
       <div className="flex items-center gap-1.5">
         <Button
           variant="outline"
           size="sm"
           onClick={() => onPageChange(page - 1)}
           disabled={!canGoPrevious}
+          aria-label="Previous page"
         >
           <ChevronLeft className="mr-1 h-3 w-3" />
           Prev
@@ -41,6 +51,7 @@ export function DataTablePagination({
           size="sm"
           onClick={() => onPageChange(page + 1)}
           disabled={!canGoNext}
+          aria-label="Next page"
         >
           Next
           <ChevronRight className="ml-1 h-3 w-3" />
@@ -48,4 +59,4 @@ export function DataTablePagination({
       </div>
     </div>
   );
-}
+});

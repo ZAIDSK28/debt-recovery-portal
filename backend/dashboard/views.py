@@ -1,6 +1,10 @@
+from datetime import timedelta
+from django.utils import timezone
+
 from rest_framework import status, views, serializers
 from rest_framework.response import Response
 
+from dashboard.models import DailyCollectionMetric
 from core.permissions import IsAdmin
 from core.utils import create_audit_log
 from dashboard.serializers import DashboardSummarySerializer, DailyCollectionMetricSerializer
@@ -33,7 +37,11 @@ class DailyCollectionsView(views.APIView):
 
     def get(self, request, *args, **kwargs):
         days = parse_days(request.query_params.get("days", 30))
-        metrics = rebuild_daily_metrics(days=days)
+        end_date = timezone.localdate()
+        start_date = end_date - timedelta(days=days - 1)
+        metrics = DailyCollectionMetric.objects.filter(
+            date__gte=start_date, date__lte=end_date
+        ).order_by("date")
         serializer = DailyCollectionMetricSerializer(metrics, many=True)
         return Response(serializer.data)
 

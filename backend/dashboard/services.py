@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from decimal import Decimal
 
-from django.db.models import Count, DecimalField, Sum, Value
+from django.db.models import Q, Count, DecimalField, Sum, Value
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
@@ -23,23 +24,44 @@ def _sum_amount(queryset):
 def rebuild_daily_metric_for_date(target_date):
     payments = Payment.objects.filter(created_at__date=target_date)
 
-    cash_total = _sum_amount(payments.filter(payment_method=Payment.PaymentMethod.CASH))
-    upi_total = _sum_amount(payments.filter(payment_method=Payment.PaymentMethod.UPI))
-    cheque_total = _sum_amount(
-        payments.filter(
-            payment_method=Payment.PaymentMethod.CHEQUE,
-            cheque_status=Payment.ChequeStatus.CLEARED,
-        )
-    )
-    electronic_total = _sum_amount(
-        payments.filter(
-            payment_method=Payment.PaymentMethod.ELECTRONIC,
-            cheque_status=Payment.ChequeStatus.CLEARED,
-        )
+    totals = payments.aggregate(
+        cash_total=Coalesce(
+            Sum("amount", filter=Q(payment_method=Payment.PaymentMethod.CASH)),
+            Value(Decimal("0.00"), output_field=amount_field),
+        ),
+        upi_total=Coalesce(
+            Sum("amount", filter=Q(payment_method=Payment.PaymentMethod.UPI)),
+            Value(Decimal("0.00"), output_field=amount_field),
+        ),
+        cheque_total=Coalesce(
+            Sum(
+                "amount",
+                filter=Q(
+                    payment_method=Payment.PaymentMethod.CHEQUE,
+                    cheque_status=Payment.ChequeStatus.CLEARED,
+                ),
+            ),
+            Value(Decimal("0.00"), output_field=amount_field),
+        ),
+        electronic_total=Coalesce(
+            Sum(
+                "amount",
+                filter=Q(
+                    payment_method=Payment.PaymentMethod.ELECTRONIC,
+                    cheque_status=Payment.ChequeStatus.CLEARED,
+                ),
+            ),
+            Value(Decimal("0.00"), output_field=amount_field),
+        ),
+        payment_count=Count("id"),
     )
 
+    cash_total = totals["cash_total"]
+    upi_total = totals["upi_total"]
+    cheque_total = totals["cheque_total"]
+    electronic_total = totals["electronic_total"]
+    payment_count = totals["payment_count"]
     total_collection = cash_total + upi_total + cheque_total + electronic_total
-    payment_count = payments.count()
     bill_count_cleared = Bill.objects.filter(cleared_at__date=target_date).count()
 
     metric, _ = DailyCollectionMetric.objects.update_or_create(

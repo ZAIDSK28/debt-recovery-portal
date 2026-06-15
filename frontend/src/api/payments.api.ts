@@ -1,3 +1,4 @@
+// src/api/payments.api.ts
 import { axiosInstance } from "@/api/axiosInstance";
 import type {
   ChequeStatus,
@@ -23,33 +24,42 @@ export interface PaymentsQueryParams {
   page?: number;
   page_size?: number;
   payment_method?: PaymentMethod;
+  /** Comma-separated list of payment methods for multi-method queries */
   payment_method_in?: string;
   start_date?: string;
   end_date?: string;
   search?: string;
   ordering?: string;
+  /** Filter by cheque status — used by admin-cheques-page */
+  cheque_status?: ChequeStatus;
+  /** Filter by firm — used by admin-electronic-page */
+  firm?: "NA" | "MZ";
 }
 
 export async function recordPaymentApi(
   billId: number,
-  payload: RecordPaymentPayload
+  payload: RecordPaymentPayload,
 ): Promise<Payment> {
-  const { data } = await axiosInstance.post<Payment>(`/payments/${billId}/payments/`, payload);
+  const { data } = await axiosInstance.post<Payment>(
+    `/payments/${billId}/payments/`,
+    payload,
+  );
   return data;
 }
 
 export async function getPaymentsApi(
-  params: PaymentsQueryParams
+  params: PaymentsQueryParams,
 ): Promise<PaginatedResponse<Payment>> {
-  const { data } = await axiosInstance.get<PaginatedResponse<Payment>>("/payments/all/", {
-    params,
-  });
+  const { data } = await axiosInstance.get<PaginatedResponse<Payment>>(
+    "/payments/all/",
+    { params },
+  );
   return data;
 }
 
 export async function updatePaymentStatusApi(
   id: number,
-  payload: { cheque_status: ChequeStatus }
+  payload: { cheque_status: ChequeStatus },
 ): Promise<Payment> {
   const { data } = await axiosInstance.patch<Payment>(`/payments/${id}/`, payload);
   return data;

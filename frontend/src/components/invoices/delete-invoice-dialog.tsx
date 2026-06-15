@@ -1,4 +1,5 @@
 // src/components/invoices/delete-invoice-dialog.tsx
+import { useState } from "react";
 import { toast } from "@/lib/toast";
 import {
   AlertDialog,
@@ -26,9 +27,12 @@ export function DeleteInvoiceDialog({
   onDeleted?: () => void;
 }) {
   const deleteMutation = useDeleteInvoiceReport();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   async function handleDelete() {
-    if (!invoiceId) return;
+    if (!invoiceId || isDeleting) return;
+
+    setIsDeleting(true);
 
     try {
       await deleteMutation.mutateAsync(invoiceId);
@@ -36,7 +40,18 @@ export function DeleteInvoiceDialog({
       onOpenChange(false);
       onDeleted?.();
     } catch (error) {
-      toast.error(getApiError(error));
+      // Ignore 404 errors – the invoice is already gone
+      const apiError = getApiError(error);
+      if (apiError.toLowerCase().includes("not found") || apiError.toLowerCase().includes("no printableinvoice matches")) {
+        // Already deleted – treat as success
+        toast.success("Invoice already deleted");
+        onOpenChange(false);
+        onDeleted?.();
+      } else {
+        toast.error(apiError);
+      }
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -52,11 +67,15 @@ export function DeleteInvoiceDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="outline" disabled={isDeleting}>Cancel</Button>
           </AlertDialogCancel>
           <AlertDialogAction asChild>
-            <Button variant="danger" onClick={handleDelete} disabled={deleteMutation.isPending}>
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            <Button 
+              variant="danger" 
+              onClick={handleDelete} 
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
             </Button>
           </AlertDialogAction>
         </AlertDialogFooter>

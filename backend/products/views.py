@@ -132,12 +132,19 @@ class StockMovementListCreateView(generics.ListCreateAPIView):
         movement_type = self.request.query_params.get("movement_type")
         warehouse_id = self.request.query_params.get("warehouse_id")
         product_id = self.request.query_params.get("product_id")
+        start_date = self.request.query_params.get("start_date")
+        end_date = self.request.query_params.get("end_date")
+
         if movement_type:
             queryset = queryset.filter(movement_type=movement_type)
         if warehouse_id:
             queryset = queryset.filter(warehouse_id=warehouse_id)
         if product_id:
             queryset = queryset.filter(product_id=product_id)
+        if start_date:
+            queryset = queryset.filter(created_at__date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(created_at__date__lte=end_date)
         return queryset
 
 
@@ -160,13 +167,20 @@ class StockTransferListCreateView(generics.ListCreateAPIView):
     ]
 
     def get_queryset(self):
-        return StockTransfer.objects.select_related(
+        queryset = StockTransfer.objects.select_related(
             "source_warehouse",
             "destination_warehouse",
             "product",
             "product__category_ref",
             "created_by",
         ).all()
+        start_date = self.request.query_params.get("start_date")
+        end_date = self.request.query_params.get("end_date")
+        if start_date:
+            queryset = queryset.filter(created_at__date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(created_at__date__lte=end_date)
+        return queryset
 
-    def perform_create(self, serializer: StockTransferSerializer) -> None:
+    def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)

@@ -57,7 +57,11 @@ export default function ProductsListPage() {
     [deleteMutation],
   );
 
-  const columns: DataTableColumn<Product>[] = [
+  const handleEdit = useCallback((id: number) => {
+    navigate(`/products/${id}/edit`);
+  }, [navigate]);
+
+  const columns = useMemo<DataTableColumn<Product>[]>(() => [
     {
       key: "product_code",
       header: "Code",
@@ -124,7 +128,7 @@ export default function ProductsListPage() {
             variant="ghost"
             size="icon"
             title="Edit"
-            onClick={() => navigate(`/products/${r.id}/edit`)}
+            onClick={() => handleEdit(r.id)}
           >
             <Edit3 className="h-3.5 w-3.5" />
           </Button>
@@ -140,7 +144,7 @@ export default function ProductsListPage() {
         </div>
       ),
     },
-  ];
+  ], [handleEdit, handleDelete]);
 
   return (
     <AppShell >
@@ -187,7 +191,7 @@ export default function ProductsListPage() {
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="all">All Statuses</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
