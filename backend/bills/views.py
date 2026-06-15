@@ -62,6 +62,7 @@ class BillListCreateView(generics.ListCreateAPIView):
             entity_type="bill",
             entity_id=str(bill.id),
             metadata={"invoice_number": bill.invoice_number},
+            request=self.request,
         )
 
 
@@ -98,6 +99,7 @@ class BillRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             entity_type="bill",
             entity_id=str(bill.id),
             metadata={"invoice_number": bill.invoice_number},
+            request=self.request,
         )
 
     def perform_destroy(self, instance):
@@ -107,6 +109,7 @@ class BillRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             entity_type="bill",
             entity_id=str(instance.id),
             metadata={"invoice_number": instance.invoice_number},
+            request=self.request,
         )
         instance.delete()
 
@@ -137,6 +140,7 @@ class AssignBillsView(views.APIView):
                     "old_assigned_to": old_assignee,
                     "new_assigned_to": assigned_to.id if assigned_to else None,
                 },
+                request=request,
             )
 
         refreshed = Bill.objects.filter(id__in=bill_ids).select_related("outlet__route", "assigned_to")
@@ -199,6 +203,7 @@ def _run_import_job(job_id: int, file_bytes: bytes):
             entity_type="bill_import",
             entity_id=str(job.id),
             metadata=result,
+            # No request object available in background thread – IP will be NULL
         )
     except Exception as exc:
         logger.exception("Bill import failed", extra={"job_id": job_id}, exc_info=exc)

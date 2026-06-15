@@ -46,6 +46,7 @@ class LoginView(generics.GenericAPIView):
                 entity_type="user",
                 entity_id=str(user.id),
                 metadata={"username": user.username},
+                request=self.request,
             )
             return Response({"requires_otp": True}, status=status.HTTP_200_OK)
 
@@ -56,6 +57,7 @@ class LoginView(generics.GenericAPIView):
             entity_type="user",
             entity_id=str(user.id),
             metadata={"username": user.username, "role": user.role},
+            request=self.request,
         )
         return Response(
             {
@@ -108,6 +110,7 @@ class VerifyOTPView(generics.GenericAPIView):
             entity_type="user",
             entity_id=str(user.id),
             metadata={"username": user.username},
+            request=self.request,
         )
 
         return Response(
@@ -140,6 +143,7 @@ class ResendOTPView(generics.GenericAPIView):
             entity_type="user",
             entity_id=str(user.id),
             metadata={"username": user.username},
+            request=self.request,
         )
         return Response({"detail": "OTP sent."}, status=status.HTTP_200_OK)
 
@@ -170,6 +174,7 @@ class UserListView(generics.ListCreateAPIView):
             entity_type="user",
             entity_id=str(user.id),
             metadata={"username": user.username, "role": user.role},
+            request=self.request,
         )
 
 
@@ -190,6 +195,7 @@ class UserRetrieveUpdateView(generics.RetrieveUpdateAPIView):
             entity_type="user",
             entity_id=str(user.id),
             metadata={"username": user.username, "role": user.role, "is_active": user.is_active},
+            request=self.request,
         )
 
 
@@ -210,6 +216,7 @@ class UserSetPasswordView(views.APIView):
             entity_type="user",
             entity_id=str(user.id),
             metadata={"username": user.username},
+            request=self.request,
         )
 
         return Response({"detail": "Password updated."}, status=status.HTTP_200_OK)
@@ -229,6 +236,7 @@ class UserActivateView(views.APIView):
             entity_type="user",
             entity_id=str(user.id),
             metadata={"username": user.username},
+            request=self.request,
         )
 
         return Response({"detail": "User activated."}, status=status.HTTP_200_OK)
@@ -248,6 +256,7 @@ class UserDeactivateView(views.APIView):
             entity_type="user",
             entity_id=str(user.id),
             metadata={"username": user.username},
+            request=self.request,
         )
 
         return Response({"detail": "User deactivated."}, status=status.HTTP_200_OK)

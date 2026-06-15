@@ -59,6 +59,7 @@ class RebuildDailyCollectionsView(views.APIView):
             entity_type="dashboard",
             entity_id="daily_collection_metrics",
             metadata={"days": days},
+            request=self.request,
         )
 
         serializer = DailyCollectionMetricSerializer(metrics, many=True)

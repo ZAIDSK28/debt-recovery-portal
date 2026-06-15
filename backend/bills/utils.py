@@ -13,6 +13,7 @@ from django.utils import timezone
 
 from bills.models import Bill, BillImportJob, Outlet, Route
 from users.models import User
+from core.excel_utils import style_excel_worksheet   # <-- ADD THIS
 
 logger = logging.getLogger(__name__)
 
@@ -158,6 +159,10 @@ def build_bills_export_response(queryset, start_date: str | None = None, end_dat
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df.to_excel(writer, index=False, sheet_name="Bills")
+        # Apply professional styling
+        workbook = writer.book
+        worksheet = writer.sheets["Bills"]
+        style_excel_worksheet(worksheet, header_row=1, has_header=True, alternate_rows=True)
 
     output.seek(0)
     response = HttpResponse(

@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from decimal import Decimal
 import io
 import logging
 
 from datetime import timedelta
 
 import pandas as pd
-from django.db.models import Q, DecimalField, Sum, Value
+from django.db.models import DecimalField, Sum, Value
 from django.db.models.functions import Coalesce, TruncDate
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -28,6 +27,7 @@ from payments.serializers import (
     PaymentStatusUpdateSerializer,
     TodayTotalsSerializer,
 )
+from core.excel_utils import style_excel_worksheet   # <-- ADD THIS
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +103,7 @@ class RecordPaymentView(generics.CreateAPIView):
                 "payment_method": payment.payment_method,
                 "amount": str(payment.amount),
             },
+            request=self.request,
         )
 
 
@@ -138,6 +139,7 @@ class PaymentUpdateView(generics.UpdateAPIView):
                 "old_status": old_status,
                 "new_status": payment.cheque_status,
             },
+            request=self.request,
         )
 
 
@@ -151,24 +153,22 @@ class TodayTotalsView(views.APIView):
         return Response(serializer.data)
 
     def _compute_totals(self, start_date, end_date):
-        base = Payment.objects.filter(
-            created_at__date__gte=start_date, created_at__date__lte=end_date
-        )
+        base = Payment.objects.filter(created_at__date__gte=start_date, created_at__date__lte=end_date)
         amount_field = DecimalField(max_digits=12, decimal_places=2)
 
         totals = base.aggregate(
             cash_total=Coalesce(
-                Sum("amount", filter=Q(payment_method=Payment.PaymentMethod.CASH)),
+                Sum("amount", filter=models.Q(payment_method=Payment.PaymentMethod.CASH)),
                 Value(Decimal("0.00"), output_field=amount_field),
             ),
             upi_total=Coalesce(
-                Sum("amount", filter=Q(payment_method=Payment.PaymentMethod.UPI)),
+                Sum("amount", filter=models.Q(payment_method=Payment.PaymentMethod.UPI)),
                 Value(Decimal("0.00"), output_field=amount_field),
             ),
             cheque_total=Coalesce(
                 Sum(
                     "amount",
-                    filter=Q(
+                    filter=models.Q(
                         payment_method=Payment.PaymentMethod.CHEQUE,
                         cheque_status=Payment.ChequeStatus.CLEARED,
                     ),
@@ -178,7 +178,7 @@ class TodayTotalsView(views.APIView):
             electronic_total=Coalesce(
                 Sum(
                     "amount",
-                    filter=Q(
+                    filter=models.Q(
                         payment_method=Payment.PaymentMethod.ELECTRONIC,
                         cheque_status=Payment.ChequeStatus.CLEARED,
                     ),
@@ -206,8 +206,7 @@ class DailySummaryView(views.APIView):
             .annotate(
                 total=Coalesce(
                     Sum("amount"),
-                    Value(0),
-                    output_field=amount_field,
+                    Value(0, output_field=amount_field),
                 )
             )
             .order_by("day")
@@ -275,6 +274,10 @@ class ExportPaymentsView(views.APIView):
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
             df.to_excel(writer, index=False, sheet_name="Payments")
+            # Apply professional styling
+            workbook = writer.book
+            worksheet = writer.sheets["Payments"]
+            style_excel_worksheet(worksheet, header_row=1, has_header=True, alternate_rows=True)
 
         output.seek(0)
         response = HttpResponse(

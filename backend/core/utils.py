@@ -37,19 +37,15 @@ def create_audit_log(
     entity_id: str,
     metadata: dict[str, Any] | None = None,
     ip_address: str | None = None,
+    request=None,                  # <-- new parameter
 ) -> None:
-    """
-    Persist an audit log entry.
+    # If ip_address not given but request is, try to use request.client_ip
+    if ip_address is None and request is not None:
+        ip_address = getattr(request, 'client_ip', None)
+        # fallback in case middleware didn't run (should not happen)
+        if ip_address is None:
+            ip_address = get_client_ip(request)
 
-    Args:
-        actor: The User instance performing the action (may be None for
-               system-generated events).
-        action: Dot-separated action identifier, e.g. "stock.transfer.created".
-        entity_type: Model name of the affected entity, e.g. "StockTransfer".
-        entity_id: String representation of the entity's primary key.
-        metadata: Arbitrary JSON-serialisable context for the event.
-        ip_address: Client IP — obtain via get_client_ip(request).
-    """
     actor_username = ""
     if actor is not None:
         actor_username = getattr(actor, "username", "") or ""
@@ -63,7 +59,6 @@ def create_audit_log(
         metadata=metadata or {},
         ip_address=ip_address,
     )
-
 
 def build_request_log_context(request) -> dict[str, Any]:
     request_id = None

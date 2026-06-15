@@ -403,6 +403,7 @@ class PrintableInvoiceListCreateView(generics.ListCreateAPIView):
                 "linked_bill_id": getattr(getattr(invoice, "recovery_bill", None), "id", None),
                 "party_id": invoice.party_id,
             },
+            request=self.request,
         )
 
         response_serializer = PrintableInvoiceDetailSerializer(invoice)
