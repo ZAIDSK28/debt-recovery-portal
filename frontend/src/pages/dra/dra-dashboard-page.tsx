@@ -4,13 +4,12 @@ import { BadgeIndianRupee, FileText } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/page-header";
 import { KpiCard } from "@/components/common/kpi-card";
-import { SearchInput } from "@/components/common/search-input";
 import { DataTable, type DataTableColumn } from "@/components/common/data-table";
 import { PaymentFormModal } from "@/components/payments/payment-form-modal";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchInput } from "@/components/common/search-input";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useMyAssignments } from "@/hooks/useBills";
 import { cn, formatCurrency, formatDate, overdueSeverity } from "@/lib/utils";
@@ -47,6 +46,20 @@ export default function DRADashboardPage() {
   const handleSortChange = useCallback((ord: string | undefined) => {
     setOrdering(ord);
     setPage(1);
+  }, []);
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
+    setPage(1);
+  }, []);
+
+  const handleModeChange = useCallback((value: string) => {
+    setMode(value as typeof mode);
+    setPage(1);
+  }, []);
+
+  const clearBillSelection = useCallback(() => {
+    setSelectedBill(null);
   }, []);
 
   const overdueCellClass = useCallback((days: number) => {
@@ -105,10 +118,33 @@ export default function DRADashboardPage() {
     },
   ], [openPayment, overdueCellClass]);
 
+  // Integrated filters – will be rendered inside DataTable and visible on all screen sizes
+  const filters = useMemo(() => (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="flex-1">
+        <SearchInput
+          placeholder="Search assigned bills…"
+          value={search}
+          onChange={handleSearchChange}
+        />
+      </div>
+      <div className="w-full sm:w-52">
+        <Select value={mode} onValueChange={handleModeChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="Search mode" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="invoice_number">Invoice Number</SelectItem>
+            <SelectItem value="route_name">Route Name</SelectItem>
+            <SelectItem value="outlet_name">Outlet Name</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  ), [search, mode, handleSearchChange, handleModeChange]);
 
-  
   return (
-    <AppShell >
+    <AppShell>
       <div className="space-y-5">
         <PageHeader
           title="Assigned Invoices"
@@ -130,98 +166,38 @@ export default function DRADashboardPage() {
           />
         </div>
 
-        {/* Mobile cards */}
-        {!query.isLoading && bills.length > 0 ? (
-          <div className="space-y-3 lg:hidden">
-            {bills.map((bill) => {
-              const s = overdueSeverity(bill.overdue_days);
-              const cls = s === "high" ? "text-[#E04E6A]" : s === "medium" ? "text-[#D97B0A]" : "text-[#1E1E30]";
-              return (
-                <div key={bill.id} className="rounded-[18px] border border-[#DFE1F0] bg-white p-3.5 shadow-[0_2px_8px_rgba(30,30,48,0.06)]">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#9898B4]">Invoice</p>
-                  <p className="text-[15px] font-semibold text-[#1E1E30]">{bill.invoice_number}</p>
-
-                  <div className="mt-3 grid grid-cols-2 gap-2.5">
-                    {[
-                      ["Date", formatDate(bill.invoice_date)],
-                      ["Route", bill.route_name],
-                      ["Outlet", bill.outlet_name],
-                      ["Brand", bill.brand],
-                      ["Total", formatCurrency(bill.actual_amount)],
-                      ["Remaining", formatCurrency(bill.remaining_amount)],
-                    ].map(([lbl, val]) => (
-                      <div key={String(lbl)}>
-                        <p className="text-[11px] text-[#9898B4]">{lbl}</p>
-                        <p className="text-[13px] font-medium text-[#1E1E30]">{val}</p>
-                      </div>
-                    ))}
-                    <div>
-                      <p className="text-[11px] text-[#9898B4]">Overdue</p>
-                      <p className={cn("text-[13px] font-semibold", cls)}>{bill.overdue_days}d</p>
-                    </div>
-                  </div>
-
-                  <Button className="mt-3 w-full" size="sm" onClick={() => openPayment(bill)}>
-                    Record Payment
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        ) : null}
-
-        {/* Desktop DataTable */}
-        <div className={bills.length > 0 && !query.isLoading ? "hidden lg:block" : "block"}>
-          <DataTable
-            columns={columns}
-            data={bills}
-            total={query.data?.count ?? 0}
-            page={page}
-            pageSize={pageSize}
-            ordering={ordering}
-            isLoading={query.isLoading}
-            isFetching={query.isFetching}
-            onPageChange={setPage}
-            onSortChange={handleSortChange}
-            rowKey={(r) => r.id}
-            minWidth={920}
-            filters={
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="flex-1">
-                  <SearchInput
-                    placeholder="Search assigned bills…"
-                    value={search}
-                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  />
-                </div>
-                <div className="w-full sm:w-52">
-                  <Select value={mode} onValueChange={(v) => { setMode(v as typeof mode); setPage(1); }}>
-                    <SelectTrigger><SelectValue placeholder="Search mode" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="invoice_number">Invoice Number</SelectItem>
-                      <SelectItem value="route_name">Route Name</SelectItem>
-                      <SelectItem value="outlet_name">Outlet Name</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            }
-            emptyState={
-              <EmptyState
-                icon={<FileText className="h-6 w-6" />}
-                title="No assigned invoices"
-                description="There are currently no open invoices assigned to you."
-              />
-            }
-          />
-        </div>
+        {/* DataTable is always visible – handles both desktop and mobile (scrollable) */}
+        <DataTable
+          columns={columns}
+          data={bills}
+          total={query.data?.count ?? 0}
+          page={page}
+          pageSize={pageSize}
+          ordering={ordering}
+          isLoading={query.isLoading}
+          isFetching={query.isFetching}
+          onPageChange={setPage}
+          onSortChange={handleSortChange}
+          rowKey={(r) => r.id}
+          minWidth={920}
+          filters={filters}
+          emptyState={
+            <EmptyState
+              icon={<FileText className="h-6 w-6" />}
+              title="No assigned invoices"
+              description="There are currently no open invoices assigned to you."
+            />
+          }
+        />
       </div>
 
       <PaymentFormModal
         open={isPaymentOpen}
-        onOpenChange={(open) => { setIsPaymentOpen(open); if (!open) setSelectedBill(null); }}
+        onOpenChange={(open) => { setIsPaymentOpen(open); if (!open) clearBillSelection(); }}
         bill={selectedBill}
-        onBillCleared={() => {}}
+        onBillCleared={() => {
+          void query.refetch();
+        }}
       />
     </AppShell>
   );
