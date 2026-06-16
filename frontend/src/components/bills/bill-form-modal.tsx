@@ -75,15 +75,14 @@ export const BillFormModal = memo(function BillFormModal({
   const assignedTo = useWatch({ control: form.control, name: "assigned_to" });
   const invoiceDate = useWatch({ control: form.control, name: "invoice_date" });
 
-  const effectiveRouteId = watchedRouteId
-    ? Number(watchedRouteId)
-    : bill?.route_id
-      ? Number(bill.route_id)
-      : null;
+  // BUG FIX: Don't fall back to bill.route_id — the form is always reset with
+  // the correct value in the effect below, so a stale fallback would keep
+  // showing the original route's outlets even after the user clears the field.
+  const effectiveRouteId = watchedRouteId ? Number(watchedRouteId) : null;
 
   const { data: outlets = [] } = useOutlets(effectiveRouteId);
 
-  // Reset form when modal opens or the bill context changes
+  // Reset form when modal opens or bill context changes
   useEffect(() => {
     if (!open) return;
     submitLockRef.current = false;
@@ -130,6 +129,9 @@ export const BillFormModal = memo(function BillFormModal({
         const payload = {
           invoice_number: values.invoice_number,
           invoice_date: values.invoice_date,
+          // BUG FIX: route_id was validated but never sent — route was silently
+          // dropped on every create/update call.
+          route_id: Number(values.route_id),
           outlet: Number(values.outlet),
           brand: values.brand,
           actual_amount: values.actual_amount,
@@ -159,7 +161,6 @@ export const BillFormModal = memo(function BillFormModal({
 
   const isSubmitting = createBill.isPending || updateBill.isPending;
 
-  // handleSubmit is stable — fine to call inline from onClick
   const handleClickSubmit = useCallback(() => {
     void form.handleSubmit(onSubmit)();
   }, [form, onSubmit]);
@@ -172,16 +173,10 @@ export const BillFormModal = memo(function BillFormModal({
         </DialogHeader>
 
         <DialogBody>
-          {/*
-           * No id / form attribute pattern here.
-           * The submit button in DialogFooter calls form.handleSubmit directly via
-           * onClick to avoid cross-form submit event propagation through the Radix
-           * portal boundary, which was causing underlying page elements to fire.
-           */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="invoice_number">Invoice Number</Label>
-              <Input id="invoice_number" {...form.register("invoice_number")} />
+              <Input id="invoice_number" className="h-8" {...form.register("invoice_number")} />
               {form.formState.errors.invoice_number ? (
                 <p className="text-[11px] text-[#E04E6A]">
                   {form.formState.errors.invoice_number.message}
@@ -193,9 +188,7 @@ export const BillFormModal = memo(function BillFormModal({
               <Label htmlFor="invoice_date">Invoice Date</Label>
               <DateInput
                 value={invoiceDate ?? ""}
-                onChange={(value) =>
-                  form.setValue("invoice_date", value, { shouldValidate: true })
-                }
+                onChange={(val) => form.setValue("invoice_date", val, { shouldValidate: true })}
                 clearable
               />
               {form.formState.errors.invoice_date ? (
@@ -212,9 +205,10 @@ export const BillFormModal = memo(function BillFormModal({
                 value={watchedRouteId}
                 placeholder="Select route"
                 searchPlaceholder="Search routes..."
-                onChange={(value) => {
-                  if (form.getValues("route_id") !== value) {
-                    form.setValue("route_id", value, { shouldValidate: true });
+                onChange={(val) => {
+                  if (form.getValues("route_id") !== val) {
+                    form.setValue("route_id", val, { shouldValidate: true });
+                    // Clear outlet when route changes
                     form.setValue("outlet", "", { shouldValidate: true });
                   }
                 }}
@@ -234,9 +228,7 @@ export const BillFormModal = memo(function BillFormModal({
                 placeholder={effectiveRouteId ? "Select outlet" : "Choose route first"}
                 searchPlaceholder="Search outlets..."
                 disabled={!effectiveRouteId}
-                onChange={(value) =>
-                  form.setValue("outlet", value, { shouldValidate: true })
-                }
+                onChange={(val) => form.setValue("outlet", val, { shouldValidate: true })}
               />
               {form.formState.errors.outlet ? (
                 <p className="text-[11px] text-[#E04E6A]">
@@ -247,7 +239,7 @@ export const BillFormModal = memo(function BillFormModal({
 
             <div className="space-y-1.5">
               <Label htmlFor="brand">Brand</Label>
-              <Input id="brand" {...form.register("brand")} />
+              <Input id="brand" className="h-8" {...form.register("brand")} />
               {form.formState.errors.brand ? (
                 <p className="text-[11px] text-[#E04E6A]">
                   {form.formState.errors.brand.message}
@@ -262,6 +254,7 @@ export const BillFormModal = memo(function BillFormModal({
                 type="number"
                 step="0.01"
                 min="0"
+                className="h-8"
                 {...form.register("actual_amount")}
               />
               {form.formState.errors.actual_amount ? (
@@ -275,8 +268,8 @@ export const BillFormModal = memo(function BillFormModal({
               <Label>Assign to Agent</Label>
               <Select
                 value={assignedTo ?? "unassigned"}
-                onValueChange={(value) =>
-                  form.setValue("assigned_to", value, { shouldValidate: true })
+                onValueChange={(val) =>
+                  form.setValue("assigned_to", val, { shouldValidate: true })
                 }
               >
                 <SelectTrigger>
@@ -299,16 +292,13 @@ export const BillFormModal = memo(function BillFormModal({
           <Button
             type="button"
             variant="outline"
+            size="sm"
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
           >
             Cancel
           </Button>
-          <Button
-            type="button"
-            onClick={handleClickSubmit}
-            disabled={isSubmitting}
-          >
+          <Button type="button" size="sm" onClick={handleClickSubmit} disabled={isSubmitting}>
             {isSubmitting ? "Saving…" : bill ? "Save Changes" : "Create Invoice"}
           </Button>
         </DialogFooter>

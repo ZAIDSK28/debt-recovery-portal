@@ -66,13 +66,14 @@ function TabPanel({ tab }: { tab: PaymentTab }) {
     setPage(1);
   }, []);
 
-  function resetFilters() {
+  // ✅ Stable reset function
+  const resetFilters = useCallback(() => {
     setSearch("");
     setFilterStartDate("");
     setFilterEndDate("");
     setChequeStatus("all");
     setPage(1);
-  }
+  }, []);
 
   const isDirty = Boolean(search || filterStartDate || filterEndDate || (!isCashUpi && chequeStatus !== "all"));
 
@@ -111,6 +112,69 @@ function TabPanel({ tab }: { tab: PaymentTab }) {
       ? "cheque_history.xlsx"
       : "electronic_history.xlsx";
 
+  // ✅ Memoize filters to prevent unnecessary re‑renders of PaymentsTable
+  const filters = useMemo(
+    () => (
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="min-w-[180px] flex-1">
+          <SearchInput
+            placeholder="Search invoice or DRA…"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
+        {!isCashUpi && (
+          <div className="flex flex-col gap-1">
+            <Label className="text-[10px] text-[#9898B4]">Status</Label>
+            <Select
+              value={chequeStatus}
+              onValueChange={(v) => {
+                setChequeStatus(v);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="h-8 w-[128px]">
+                <SelectValue placeholder="All statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="cleared">Cleared</SelectItem>
+                <SelectItem value="bounced">Bounced</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        <DateRangeFilter
+          startDate={filterStartDate}
+          endDate={filterEndDate}
+          onStartDateChange={(v) => {
+            setFilterStartDate(v);
+            setPage(1);
+          }}
+          onEndDateChange={(v) => {
+            setFilterEndDate(v);
+            setPage(1);
+          }}
+          onClear={() => {
+            setFilterStartDate("");
+            setFilterEndDate("");
+            setPage(1);
+          }}
+        />
+        {isDirty && (
+          <Button variant="ghost" size="sm" onClick={resetFilters}>
+            Clear all
+          </Button>
+        )}
+      </div>
+    ),
+    [search, chequeStatus, filterStartDate, filterEndDate, isCashUpi, isDirty, resetFilters]
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -137,54 +201,7 @@ function TabPanel({ tab }: { tab: PaymentTab }) {
         showStatusColumn={!isCashUpi}
         emptyTitle={emptyTitles[tab]}
         emptyDescription={emptyDescriptions[tab]}
-        filters={
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="min-w-[180px] flex-1">
-              <SearchInput
-                placeholder="Search invoice or DRA…"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-              />
-            </div>
-            {!isCashUpi && (
-              <div className="flex flex-col gap-1">
-                <Label className="text-[10px] text-[#9898B4]">Status</Label>
-                <Select
-                  value={chequeStatus}
-                  onValueChange={(v) => {
-                    setChequeStatus(v);
-                    setPage(1);
-                  }}
-                >
-                  <SelectTrigger className="h-8 w-[128px]">
-                    <SelectValue placeholder="All statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="cleared">Cleared</SelectItem>
-                    <SelectItem value="bounced">Bounced</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <DateRangeFilter
-              startDate={filterStartDate}
-              endDate={filterEndDate}
-              onStartDateChange={(v) => { setFilterStartDate(v); setPage(1); }}
-              onEndDateChange={(v) => { setFilterEndDate(v); setPage(1); }}
-              onClear={() => { setFilterStartDate(""); setFilterEndDate(""); setPage(1); }}
-            />
-            {isDirty && (
-              <Button variant="ghost" size="sm" onClick={resetFilters}>
-                Clear all
-              </Button>
-            )}
-          </div>
-        }
+        filters={filters}
       />
     </div>
   );

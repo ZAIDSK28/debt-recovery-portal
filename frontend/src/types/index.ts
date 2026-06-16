@@ -225,6 +225,15 @@ export interface ImportBillsStatus {
   percentage: number;
 }
 
+export interface CreateBillPayload {
+  invoice_number: string;
+  invoice_date: string;
+  outlet: number;
+  brand: string;
+  actual_amount: string;
+  assigned_to?: number | null;
+}
+
 // ─── Invoice types with warehouse support ────────────────────────────────────
 
 export interface CreateInvoiceReportPayloadItem {

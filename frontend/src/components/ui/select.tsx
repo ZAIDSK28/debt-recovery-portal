@@ -17,8 +17,7 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      // Match Input: h-8, rounded-[8px], 12px text, same border/focus ring
-      "flex h-8 w-full items-center justify-between rounded-[8px]",
+      "flex h-8 w-full items-center justify-between rounded-lg",
       "border border-[#DFE1F0] bg-white px-2.5 py-1",
       "text-[12px] leading-none text-[#1E1E30]",
       "transition-colors",
@@ -46,7 +45,7 @@ const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "relative z-50 min-w-[8rem] overflow-hidden",
+        "relative z-150 min-w-32 overflow-hidden",
         "rounded-[10px] border border-[#DFE1F0] bg-white",
         "shadow-[0_4px_16px_rgba(30,30,48,0.1)]",
         "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
@@ -88,7 +87,6 @@ const SelectItem = React.forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      // 12px text, compact padding — matches table row density
       "relative flex w-full cursor-pointer select-none items-center",
       "rounded-[6px] py-1.5 pl-7 pr-2.5 text-[12px] text-[#1E1E30]",
       "outline-none transition-colors",

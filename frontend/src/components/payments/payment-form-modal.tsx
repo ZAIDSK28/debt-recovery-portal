@@ -147,7 +147,7 @@ export const PaymentFormModal = memo(function PaymentFormModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="z-[100] max-w-xl">
+      <DialogContent className="z-100 max-w-xl">
         <DialogHeader>
           <DialogTitle>Record Payment</DialogTitle>
         </DialogHeader>

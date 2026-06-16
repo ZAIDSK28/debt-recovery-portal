@@ -23,8 +23,6 @@ const buttonVariants = cva(
           "rounded-[10px] bg-[#E04E6A] text-white shadow-[0_1px_4px_rgba(224,78,106,0.25)] hover:bg-[#C9405A]",
       },
       size: {
-        // All text sizes locked to 12px to match table cell density.
-        // Height stays as-is so touch targets remain comfortable.
         default:   "h-8  px-3.5 text-[12px]",
         sm:        "h-7  px-2.5 text-[12px]",
         xs:        "h-6  px-2   text-[11px]",

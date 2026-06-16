@@ -1,5 +1,5 @@
 // src/pages/admin/admin-dashboard-page.tsx
-import { useCallback, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import { FileSpreadsheet, Plus, RefreshCw } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { AppShell } from "@/components/layout/app-shell";
@@ -9,11 +9,10 @@ import { BillsTable } from "@/components/bills/bills-table";
 import { BillFormModal } from "@/components/bills/bill-form-modal";
 import { ImportBillsDialog } from "@/components/bills/import-bills-dialog";
 import { DeleteBillDialog } from "@/components/bills/delete-bill-dialog";
-import { DailyCollectionsChart } from "@/components/charts/daily-collections-chart";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBills } from "@/hooks/useBills";
-import { useDashboardDailyCollections, useDashboardSummary, useRebuildDashboardDailyCollections } from "@/hooks/useDashboard";
+import { useDashboardDailyCollections, useRebuildDashboardDailyCollections } from "@/hooks/useDashboard";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useUsers } from "@/hooks/useUsers";
 import { exportBillsApi } from "@/api/bills.api";
@@ -21,6 +20,13 @@ import { ExportWithDateRange } from "@/components/common/export-with-date-range"
 import { DateRangeFilter } from "@/components/common/date-range-filter";
 import { getApiError } from "@/lib/utils";
 import type { Invoice } from "@/types";
+
+// ✅ Lazy load the chart – named export handled correctly
+const DailyCollectionsChart = lazy(() =>
+  import("@/components/charts/daily-collections-chart").then((module) => ({
+    default: module.DailyCollectionsChart,
+  }))
+);
 
 const METRICS_DAYS = 30;
 
@@ -51,7 +57,7 @@ export default function AdminDashboardPage() {
 
   const billsQuery = useBills(billParams);
   const usersQuery = useUsers("dra");
-  const summaryQuery = useDashboardSummary(METRICS_DAYS);
+  // ✅ No longer fetching separate summary – derived from daily data if needed, but we only need daily
   const dailyQuery = useDashboardDailyCollections(METRICS_DAYS);
   const rebuildMutation = useRebuildDashboardDailyCollections(METRICS_DAYS);
 
@@ -69,14 +75,51 @@ export default function AdminDashboardPage() {
     setDeleteBillId(bill.id);
   }, []);
 
-  async function handleRebuild() {
+  // ✅ Stable rebuild handler
+  const handleRebuild = useCallback(async () => {
     try {
       await rebuildMutation.mutateAsync();
       toast.success("Dashboard metrics rebuilt");
     } catch (error) {
       toast.error(getApiError(error));
     }
-  }
+  }, [rebuildMutation]);
+
+  // ✅ Memoize filters to prevent unnecessary re‑renders of BillsTable
+  const filters = useMemo(
+    () => (
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex-1">
+          <SearchInput
+            placeholder="Search by invoice number…"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
+        <DateRangeFilter
+          startDate={filterStartDate}
+          endDate={filterEndDate}
+          onStartDateChange={(v) => {
+            setFilterStartDate(v);
+            setPage(1);
+          }}
+          onEndDateChange={(v) => {
+            setFilterEndDate(v);
+            setPage(1);
+          }}
+          onClear={() => {
+            setFilterStartDate("");
+            setFilterEndDate("");
+            setPage(1);
+          }}
+        />
+      </div>
+    ),
+    [search, filterStartDate, filterEndDate]
+  );
 
   return (
     <AppShell>
@@ -86,7 +129,12 @@ export default function AdminDashboardPage() {
           description="Track field collections, monitor ageing, and manage invoice assignments."
           actions={
             <>
-              <Button onClick={() => { setEditingBill(null); setIsBillModalOpen(true); }}>
+              <Button
+                onClick={() => {
+                  setEditingBill(null);
+                  setIsBillModalOpen(true);
+                }}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 New Bill
               </Button>
@@ -102,7 +150,7 @@ export default function AdminDashboardPage() {
               />
               <Button
                 variant="outline"
-                onClick={() => void handleRebuild()}
+                onClick={handleRebuild}
                 disabled={rebuildMutation.isPending}
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
@@ -115,7 +163,9 @@ export default function AdminDashboardPage() {
         {dailyQuery.isLoading ? (
           <Skeleton className="h-[420px] w-full rounded-[18px]" />
         ) : (
-          <DailyCollectionsChart data={dailyQuery.data ?? []} />
+          <Suspense fallback={<Skeleton className="h-[420px] w-full rounded-[18px]" />}>
+            <DailyCollectionsChart data={dailyQuery.data ?? []} />
+          </Suspense>
         )}
 
         <BillsTable
@@ -131,33 +181,19 @@ export default function AdminDashboardPage() {
           onSortChange={handleSortChange}
           onEdit={handleEdit}
           onDelete={handleDelete}
-          filters={
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <div className="flex-1">
-                <SearchInput
-                  placeholder="Search by invoice number…"
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                />
-              </div>
-              <DateRangeFilter
-                startDate={filterStartDate}
-                endDate={filterEndDate}
-                onStartDateChange={(v) => { setFilterStartDate(v); setPage(1); }}
-                onEndDateChange={(v) => { setFilterEndDate(v); setPage(1); }}
-                onClear={() => { setFilterStartDate(""); setFilterEndDate(""); setPage(1); }}
-              />
-            </div>
-          }
+          filters={filters}
         />
       </div>
 
       <BillFormModal open={isBillModalOpen} onOpenChange={setIsBillModalOpen} bill={editingBill} />
       <ImportBillsDialog open={isImportOpen} onOpenChange={setIsImportOpen} />
-      <DeleteBillDialog open={deleteBillId !== null} onOpenChange={(open) => { if (!open) setDeleteBillId(null); }} billId={deleteBillId} />
+      <DeleteBillDialog
+        open={deleteBillId !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteBillId(null);
+        }}
+        billId={deleteBillId}
+      />
     </AppShell>
   );
 }

@@ -130,12 +130,6 @@ export default function InvoicesListPage() {
           description="Manage printable invoices separately from dashboard bills."
           actions={
             <div className="flex gap-2">
-              <ExportWithDateRange
-                exportFn={exportInvoicesApi}
-                defaultFilename="invoices_export.xlsx"
-                buttonVariant="outline"
-                buttonText="Export"
-              />
               <Button onClick={() => navigate("/invoices/new")}>
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
                 Create Invoice

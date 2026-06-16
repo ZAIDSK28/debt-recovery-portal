@@ -509,7 +509,6 @@ export function InvoiceForm({
   const modeOptions: Array<{ value: InvoiceCreationMode; label: string }> = [
     { value: "printable_only", label: "Printable only" },
     { value: "printable_and_bill", label: "Printable + Dashboard Bill" },
-    { value: "bill_only", label: "Bill only" },
   ];
 
   const isPending = createMutation.isPending || updateMutation.isPending;
